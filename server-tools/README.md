@@ -11,7 +11,7 @@ All backups are written to `<root>\backups` as PostgreSQL custom-format `.dump` 
 
 ## Backup
 
-Run `Backup-Player-Data.bat`. PostgreSQL must be installed; the tool starts the portable database when necessary. A PostgreSQL logical backup is consistent while the server is online.
+Run `Backup-Player-Data.bat`. PostgreSQL must be installed; the tool starts the portable database when necessary using an isolated `pg_ctl` process, displays progress, and verifies the completed dump before reporting success. A PostgreSQL logical backup is consistent while the server is online.
 
 ## Restore (replace)
 

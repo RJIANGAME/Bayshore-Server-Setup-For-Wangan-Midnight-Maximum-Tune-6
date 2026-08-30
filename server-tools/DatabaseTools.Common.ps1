@@ -55,6 +55,7 @@ function Invoke-WithDatabasePassword($Settings, [scriptblock]$Action) {
 }
 
 function Ensure-PostgresRunning($Layout, $Settings) {
+    Write-Host 'Checking portable PostgreSQL...'
     $psql = Find-PostgresTool $Layout.ServerRoot 'psql'
     $probeExitCode = Invoke-WithDatabasePassword $Settings {
         $previousPreference = $ErrorActionPreference
@@ -66,14 +67,46 @@ function Ensure-PostgresRunning($Layout, $Settings) {
         }
         finally { $ErrorActionPreference = $previousPreference }
     }
-    if ([int]$probeExitCode -eq 0) { return }
-
-    $startScript = Join-Path $Layout.ServerRoot 'scripts\Start-Postgres.ps1'
-    if (-not (Test-Path -LiteralPath $startScript)) {
-        throw "PostgreSQL is unavailable and '$startScript' was not found."
+    if ([int]$probeExitCode -eq 0) {
+        Write-Host 'PostgreSQL is ready.'
+        return
     }
-    & $startScript -Port $Settings.Port
-    if ($LASTEXITCODE -ne 0) { throw 'Portable PostgreSQL did not start.' }
+
+    $pgCtl = Find-PostgresTool $Layout.ServerRoot 'pg_ctl'
+    $dataRoot = Join-Path $Layout.ServerRoot '.data\postgres'
+    $versionPath = Join-Path $dataRoot 'PG_VERSION'
+    if (-not (Test-Path -LiteralPath $versionPath -PathType Leaf)) {
+        throw "Portable PostgreSQL data was not found at '$dataRoot'. Complete Bayshore server setup first."
+    }
+    $logPath = Join-Path $Layout.ServerRoot '.data\postgres.log'
+    $quotedData = '"' + $dataRoot.Replace('"', '\"') + '"'
+    $quotedLog = '"' + $logPath.Replace('"', '\"') + '"'
+    $postgresOptions = '"-p {0} -h {1}"' -f $Settings.Port, $Settings.HostName
+    $arguments = "start -D $quotedData -l $quotedLog -w -o $postgresOptions"
+
+    Write-Host 'PostgreSQL is stopped; starting it now...'
+    $startProcess = Start-Process -FilePath $pgCtl -ArgumentList $arguments -PassThru -WindowStyle Hidden
+    if (-not $startProcess.WaitForExit(30000)) {
+        try { $startProcess.Kill() } catch { }
+        throw "Portable PostgreSQL startup timed out. Check '$logPath'."
+    }
+    $startProcess.Refresh()
+    if ($startProcess.ExitCode -ne 0) {
+        throw "Portable PostgreSQL did not start (pg_ctl exit $($startProcess.ExitCode)). Check '$logPath'."
+    }
+
+    $verifyExitCode = Invoke-WithDatabasePassword $Settings {
+        $previousPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & $psql -X -q -h $Settings.HostName -p $Settings.Port -U $Settings.User `
+                -d $Settings.Database -c 'SELECT 1' *> $null
+            $LASTEXITCODE
+        }
+        finally { $ErrorActionPreference = $previousPreference }
+    }
+    if ([int]$verifyExitCode -ne 0) { throw 'PostgreSQL started, but the Bayshore database connection failed.' }
+    Write-Host 'PostgreSQL is ready.'
 }
 
 function Stop-BayshoreApplication($Layout) {
@@ -96,13 +129,15 @@ function New-DatabaseBackup($Layout, $Settings, [string]$Prefix = 'bayshore') {
     }
 
     $pgDump = Find-PostgresTool $Layout.ServerRoot 'pg_dump'
+    Write-Host "Creating player-data backup in '$($Layout.BackupRoot)'..."
     Invoke-WithDatabasePassword $Settings {
         & $pgDump -h $Settings.HostName -p $Settings.Port -U $Settings.User `
             -d $Settings.Database --format=custom --file=$output
     }
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output)) {
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output) -or (Get-Item -LiteralPath $output).Length -eq 0) {
         throw 'Database backup failed.'
     }
+    Test-DatabaseDump $Layout $output
     Write-Host "Backup created: $output" -ForegroundColor Green
     return $output
 }
