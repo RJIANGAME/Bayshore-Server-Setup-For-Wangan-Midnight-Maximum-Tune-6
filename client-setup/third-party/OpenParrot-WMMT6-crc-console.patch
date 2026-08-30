@@ -1,0 +1,31 @@
+diff --git a/OpenParrot/src/Utility/GameDetect.cpp b/OpenParrot/src/Utility/GameDetect.cpp
+--- a/OpenParrot/src/Utility/GameDetect.cpp
++++ b/OpenParrot/src/Utility/GameDetect.cpp
+@@ -481,6 +481,12 @@ void GameDetect::DetectCurrentGame()
+ 		switch (newCrcResult)
+ 		{
++#ifdef _WIN64
++		case 0x7E804704: // WMMT6 1.03.04 (wmn6r.exe SHA-256 92F02199...)
++			SetGameId(GameID::WMMT6, "WMMT6");
++			break;
++#endif
+ #ifndef _AMD64_
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp
+@@ -242,6 +242,9 @@ static __int64 __fastcall MileageFix(__int64 a1)
+ static InitFunction Wmmt6Func([]()
+ {
+-	// Alloc debug console
++	// Keep release clients quiet. The console is useful only for local debug
++	// builds and otherwise creates an extra black window beside the loader.
++#ifdef _DEBUG
+ 	FreeConsole();
+ 	AllocConsole();
+@@ -261,6 +264,7 @@ static InitFunction Wmmt6Func([]()
+ 	std::wcin.clear();
+ 
+ 	puts("hello there, maxitune");
++#endif
+ 
+ 	// folder for path redirections

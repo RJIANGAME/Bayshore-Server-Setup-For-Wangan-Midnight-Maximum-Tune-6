@@ -39,6 +39,8 @@ For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next 
 
 The client preflight also checks administrator rights and the x64 Visual C++ 2010 SP1 runtime required by `iauthdll.dll`. Registration runs from the AMCUS directory; an existing COM registration is accepted only if its DLL hash matches the selected client DLL.
 
+Client setup v1.1.8 fixes OpenParrot detection for the supported WMMT6 1.03.04 executable (CRC `7E804704`) and removes the extra Maxitune debug console from release builds.
+
 ## Player Data Backup, Restore, and Merge
 
 The repository includes root-level database tools for the portable Bayshore server:

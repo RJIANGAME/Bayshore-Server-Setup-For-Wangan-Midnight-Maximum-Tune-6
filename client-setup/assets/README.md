@@ -1,10 +1,10 @@
 # Required client assets
 
-The v1.1.7 release ZIP includes all five verified files below. Do not replace them with files from WMMT6R, WMMT6RR, or a standard unrelated TeknoParrot installation.
+The v1.1.8 release ZIP includes all five verified files below. Do not replace them with files from WMMT6R, WMMT6RR, or a standard unrelated TeknoParrot installation.
 
 | File | Required SHA-256 |
 |---|---|
-| `OpenParrot64.dll` | `C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952` |
+| `OpenParrot64.dll` | `BF36B6971738F8B43C400BF07CB422729A8B1065CB429A1978E89782FD09A5E9` |
 | `bngrw.dll` | `1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74` |
 | `setting.lua.gz` | `298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD` |
 | `server_wangan.crt` | `D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377` |

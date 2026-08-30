@@ -153,7 +153,7 @@ if ($gameHash -notin $expectedGameHashes) {
 }
 
 $requiredClientAssets = @(
-    @{ Name = 'OpenParrot64.dll'; Hash = 'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952'; Candidates = @((Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll')) },
+    @{ Name = 'OpenParrot64.dll'; Hash = 'BF36B6971738F8B43C400BF07CB422729A8B1065CB429A1978E89782FD09A5E9'; Candidates = @((Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll')) },
     @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'; Candidates = @((Join-Path $gameRoot 'bngrw.dll')) },
     @{ Name = 'setting.lua.gz'; Hash = '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'; Candidates = @((Join-Path $gameRoot 'TP\setting.lua.gz')) },
     @{ Name = 'server_wangan.crt'; Hash = 'D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377'; Candidates = @(
@@ -303,7 +303,7 @@ function Install-VerifiedAsset([string]$Name, [string]$Destination, [string]$Exp
     Copy-Item -LiteralPath $source -Destination $Destination -Force
 }
 
-Install-VerifiedAsset 'OpenParrot64.dll' (Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll') 'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952'
+Install-VerifiedAsset 'OpenParrot64.dll' (Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll') 'BF36B6971738F8B43C400BF07CB422729A8B1065CB429A1978E89782FD09A5E9'
 Install-VerifiedAsset 'bngrw.dll' (Join-Path $gameRoot 'bngrw.dll') '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'
 Install-VerifiedAsset 'setting.lua.gz' (Join-Path $gameRoot 'TP\setting.lua.gz') '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'
 

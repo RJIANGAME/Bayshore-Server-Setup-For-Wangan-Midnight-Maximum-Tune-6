@@ -53,6 +53,7 @@ MaxiTerminal is not installed on each client. Normally, one compatible MaxiTermi
 ## Supported version
 
 This package accepts only the known WMMT6 1.03.04 `wmn6r.exe` hash. It does not support WMMT6R or WMMT6RR.
+The included OpenParrot build explicitly recognizes that executable as CRC `7E804704`; release builds no longer open the extra Maxitune debug console.
 The package never scans for or automatically selects a ROM when `GamePath` is `SELECT` (the default).
 
 The multicast route is created as an on-link route (`NextHop 0.0.0.0`). Setup
