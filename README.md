@@ -35,6 +35,8 @@ The public release does not redistribute the game or MaxiTerminal. It includes a
 
 After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth itself, then launches the unchanged profile in centered, monitor-aware 16:9 borderless mode.
 
+For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next hop). It uses `New-NetRoute` with its default active-and-persistent behavior and falls back to persistent `netsh` or `route.exe` syntax when necessary.
+
 ## Player Data Backup, Restore, and Merge
 
 The repository includes root-level database tools for the portable Bayshore server:

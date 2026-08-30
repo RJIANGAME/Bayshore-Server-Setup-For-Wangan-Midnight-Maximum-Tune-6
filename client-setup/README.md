@@ -53,3 +53,7 @@ MaxiTerminal is not installed on each client. Normally, one compatible MaxiTermi
 
 This package accepts only the known WMMT6 1.03.04 `wmn6r.exe` hash. It does not support WMMT6R or WMMT6RR.
 The package never scans for or automatically selects a ROM when `GamePath` is `SELECT` (the default).
+
+The multicast route is created as an on-link route (`NextHop 0.0.0.0`). Setup
+uses the modern Windows networking command first and automatically falls back
+to persistent `netsh` or `route.exe` syntax on Windows versions that reject it.

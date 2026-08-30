@@ -431,9 +431,30 @@ $adapter = Get-NetIPAddress -AddressFamily IPv4 -IPAddress $config.AdapterIp -Er
 $route = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '225.0.0.1/32' -ErrorAction SilentlyContinue |
     Where-Object InterfaceIndex -eq $adapter.InterfaceIndex
 if (-not $route) {
-    New-NetRoute -DestinationPrefix '225.0.0.1/32' -InterfaceIndex $adapter.InterfaceIndex `
-        -NextHop $config.AdapterIp -RouteMetric 1 -PolicyStore PersistentStore | Out-Null
+    try {
+        # 0.0.0.0 declares an on-link IPv4 route. Omitting PolicyStore writes
+        # both ActiveStore and PersistentStore; New-NetRoute rejects an
+        # explicitly supplied PersistentStore on some supported Windows builds.
+        New-NetRoute -DestinationPrefix '225.0.0.1/32' -InterfaceIndex $adapter.InterfaceIndex `
+            -NextHop '0.0.0.0' -RouteMetric 1 -ErrorAction Stop | Out-Null
+    }
+    catch {
+        Write-Warning "New-NetRoute could not create the multicast route; trying the Windows netsh fallback. $($_.Exception.Message)"
+        $netsh = Join-Path $env:WINDIR 'System32\netsh.exe'
+        & $netsh interface ipv4 add route prefix=225.0.0.1/32 interface=$($adapter.InterfaceIndex) `
+            nexthop=0.0.0.0 metric=1 store=persistent | Out-Host
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "netsh could not create the multicast route; trying the legacy route.exe fallback (exit code $LASTEXITCODE)."
+            $routeExe = Join-Path $env:WINDIR 'System32\route.exe'
+            & $routeExe -p add 225.0.0.1 mask 255.255.255.255 $config.AdapterIp metric 1 if $adapter.InterfaceIndex | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "Unable to create the persistent 225.0.0.1/32 multicast route (route.exe exit code $LASTEXITCODE)." }
+        }
+    }
 }
+$route = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '225.0.0.1/32' -ErrorAction SilentlyContinue |
+    Where-Object InterfaceIndex -eq $adapter.InterfaceIndex |
+    Select-Object -First 1
+if (-not $route) { throw 'The 225.0.0.1/32 multicast route was not present after configuration.' }
 
 $firewallEntries = @(@{ Name = 'WMMT6 Cabinet'; Program = $gameExe })
 if ($maxiExe) { $firewallEntries += @{ Name = 'WMMT6 MaxiTerminal'; Program = $maxiExe } }
