@@ -133,7 +133,7 @@ $tpRoot = Split-Path $tpExe -Parent
 $amcus = Join-Path $gameRoot 'AMCUS'
 $borderlessSourceRoot = Join-Path $clientRoot 'borderless'
 
-foreach ($required in $gameExe, $tpExe, (Join-Path $amcus 'AMAuthd.exe'), (Join-Path $amcus 'AMConfig.ini'), (Join-Path $amcus 'iauthdll.dll')) {
+foreach ($required in $gameExe, $tpExe, (Join-Path $amcus 'AMAuthd.exe'), (Join-Path $amcus 'AMConfig.ini'), (Join-Path $amcus 'iauthdll.dll'), (Join-Path $amcus 'MuchaBin\muchacd.exe')) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Required client file is missing: $required" }
 }
 foreach ($required in 'WMMT6-Borderless.bat', 'WMMT6-Borderless.ps1') {
@@ -195,6 +195,72 @@ foreach ($asset in $requiredClientAssets) {
     }
     $resolvedClientAssets[$asset.Name] = $assetPath
 }
+
+# Complete read-only preflight. Nothing below this block has modified the game,
+# TeknoParrot, hosts file, firewall, routes, or client identity.
+$preflightEncoding = [Text.Encoding]::GetEncoding(932)
+$preflightAmConfigPath = Join-Path $amcus 'AMConfig.ini'
+$preflightAmConfig = [IO.File]::ReadAllText($preflightAmConfigPath, $preflightEncoding)
+foreach ($key in @('cacfg-auth_server_url', 'cacfg-auth_server_sslverify', 'amdcfg-writableConfig', 'dtcfg-dl_image_path')) {
+    if (-not [regex]::IsMatch($preflightAmConfig, ('(?m)^' + [regex]::Escape($key) + '=.*$'))) {
+        throw "AMConfig.ini lacks $key. No client files were changed."
+    }
+}
+
+$preflightProfilesRoot = Join-Path $tpRoot 'GameProfiles'
+$preflightRequestedProfile = if ($config.PSObject.Properties.Name -contains 'ProfileName') { [string]$config.ProfileName } else { 'AUTO' }
+$preflightBaseProfile = $null
+if ($preflightRequestedProfile -and $preflightRequestedProfile -ne 'AUTO') {
+    $preflightRequestedFile = if ($preflightRequestedProfile.EndsWith('.xml', [StringComparison]::OrdinalIgnoreCase)) { $preflightRequestedProfile } else { "$preflightRequestedProfile.xml" }
+    $preflightCandidate = Join-Path $preflightProfilesRoot $preflightRequestedFile
+    if (Test-Path -LiteralPath $preflightCandidate -PathType Leaf) { $preflightBaseProfile = Get-Item -LiteralPath $preflightCandidate }
+    else { throw "Requested TeknoParrot profile is missing: $preflightCandidate. No client files were changed." }
+} else {
+    $preflightBaseProfile = Get-ChildItem -LiteralPath $preflightProfilesRoot -Filter '*.xml' -File |
+        Where-Object { $_.BaseName -match '(?i)(WMMT.?6|Wangan.*Maximum.*Tune.*6)' -and $_.BaseName -notmatch '(?i)(6R|6RR)' } |
+        Sort-Object @{ Expression = { if ($_.BaseName -ieq 'WMMT6') { 0 } else { 1 } } }, Name |
+        Select-Object -First 1
+    if (-not $preflightBaseProfile) {
+        $preflightBaseProfile = Get-ChildItem -LiteralPath $preflightProfilesRoot -Filter '*.xml' -File |
+            Where-Object {
+                $text = Get-Content -LiteralPath $_.FullName -Raw
+                $text -match '(?i)(WMMT.?6|Wangan Midnight Maximum Tune 6)' -and $text -notmatch '(?i)(WMMT.?6R|Maximum Tune 6R)'
+            } |
+            Select-Object -First 1
+    }
+    if (-not $preflightBaseProfile) { throw 'Could not find a WMMT6 TeknoParrot profile. No client files were changed.' }
+}
+
+$preflightUserProfile = Join-Path (Join-Path $tpRoot 'UserProfiles') $preflightBaseProfile.Name
+$preflightProfileSource = if (Test-Path -LiteralPath $preflightUserProfile -PathType Leaf) { $preflightUserProfile } else { $preflightBaseProfile.FullName }
+[xml]$preflightProfile = Get-Content -LiteralPath $preflightProfileSource -Raw
+if (-not $preflightProfile.SelectSingleNode("//*[local-name()='GamePath']")) {
+    throw "TeknoParrot profile lacks GamePath: $preflightProfileSource. No client files were changed."
+}
+foreach ($fieldName in @('TerminalMode', 'TerminalEmulator', 'Banapass Connection', 'WhiteScreenFix', 'Windowed', 'NetworkAdapterIP', 'RouterIP')) {
+    $preflightField = $null
+    foreach ($field in $preflightProfile.SelectNodes("//*[local-name()='FieldInformation']")) {
+        $nameNode = $field.SelectSingleNode("./*[local-name()='FieldName']")
+        if ($nameNode -and $nameNode.InnerText -eq $fieldName) { $preflightField = $field; break }
+    }
+    if (-not $preflightField -or -not $preflightField.SelectSingleNode("./*[local-name()='FieldValue']")) {
+        throw "TeknoParrot profile lacks required field '$fieldName': $preflightProfileSource. No client files were changed."
+    }
+}
+
+$preflightIdentityPath = Join-Path $clientRoot 'generated-client-identity.json'
+if (Test-Path -LiteralPath $preflightIdentityPath -PathType Leaf) {
+    $preflightIdentity = Get-Content -LiteralPath $preflightIdentityPath -Raw | ConvertFrom-Json
+    if ([string]$preflightIdentity.AccessCode -notmatch '^\d{20}$' -or
+        [string]$preflightIdentity.CardId -notmatch '^[0-9A-Fa-f]{32}$' -or
+        [string]$preflightIdentity.DriveSerial -notmatch '^\d{12}$') {
+        throw "Existing client identity is invalid: $preflightIdentityPath. No client files were changed."
+    }
+}
+if (-not (Get-NetIPAddress -AddressFamily IPv4 -IPAddress $config.AdapterIp -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+    throw "The selected client IPv4 address is not assigned to this computer: $($config.AdapterIp). No client files were changed."
+}
+Write-Host 'Complete client preflight passed. Applying configuration...' -ForegroundColor Green
 
 $backupRoot = Join-Path $clientRoot ("backups\{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null

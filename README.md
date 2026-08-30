@@ -31,7 +31,7 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 5. back up and configure AMAuth, TeknoParrot, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity.
 6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
-The public release does not redistribute the game, MaxiTerminal, certificates, or key material. It includes the open-source Bayshore-compatible OpenParrot and OpenBanapass DLLs with license and corresponding-source information, plus a verified WMMT6 settings file. The configurator checks packaged files first, then the exact WMMT6/TeknoParrot installation selected by the user, and opens a file picker for anything still missing as documented in [`client-setup/assets/README.md`](client-setup/assets/README.md). All hashes are checked before any client file is changed. It does not scan for or automatically select a WMMT6 ROM.
+The public release does not redistribute the game or MaxiTerminal. It includes all five verified client runtime/configuration assets, including the client terminal certificate/key pair, plus license and corresponding-source information for the open-source DLLs. The configurator performs a complete read-only preflight of every asset, WMMT6/AMCUS requirement, TeknoParrot profile field, existing identity, and network adapter before changing anything. It does not scan for or automatically select a WMMT6 ROM.
 
 After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe` to start the configured profile in centered, monitor-aware 16:9 borderless mode.
 

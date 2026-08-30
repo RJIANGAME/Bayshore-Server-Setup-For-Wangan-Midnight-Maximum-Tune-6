@@ -1,6 +1,6 @@
 # Required client assets
 
-The v1.1.3 release ZIP already includes the two open-source DLLs and the verified `setting.lua.gz` below. For the remaining certificate and key files, supply them from your own verified build or a trusted existing WMMT6 1.03.04 client. Do not use files from WMMT6R or WMMT6RR.
+The v1.1.4 release ZIP includes all five verified files below. Do not replace them with files from WMMT6R, WMMT6RR, or a standard unrelated TeknoParrot installation.
 
 | File | Required SHA-256 |
 |---|---|
@@ -10,15 +10,15 @@ The v1.1.3 release ZIP already includes the two open-source DLLs and the verifie
 | `server_wangan.crt` | `D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377` |
 | `server_wangan.key` | `56ABEB63F00A04D54D709253E5F0F13B35ED72D4C41262A0A40F8D8BEF557C2B` |
 
-You may place missing files in this folder before setup. If one is absent, the
-configurator checks the exact WMMT6/TeknoParrot installation you manually
-selected for an existing hash-matching copy. If none is found, it opens a file
-picker for that asset. It stops before modifying the client if the selected
-file has a different hash.
+The configurator verifies all five packaged files, the selected WMMT6/AMCUS
+installation, the TeknoParrot profile, client identity, and network adapter
+before modifying anything. If a packaged file is removed, setup can still use
+a hash-matching copy or ask the user to select one.
 
 The configurator never generates a DLL, certificate, or private key. It also
 never searches for or automatically selects a WMMT6 ROM.
 
-Do not commit certificates or key material to this repository. The repository
-`.gitignore` excludes them. The DLLs distributed in the release are open-source;
-their notices and corresponding-source information are in `../third-party`.
+The release certificate and key form the client terminal trust pair used by
+this setup; they are not the Bayshore database password or server `.env` secret.
+The DLLs are open-source; their notices and corresponding-source information
+are in `../third-party`.
