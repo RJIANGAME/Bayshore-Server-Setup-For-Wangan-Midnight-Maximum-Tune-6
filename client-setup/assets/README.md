@@ -1,6 +1,6 @@
 # Required client assets
 
-Supply these files from your own verified build, a trusted existing WMMT6 1.03.04 client, or the corresponding official Project Asakura sources. Do not use files from WMMT6R or WMMT6RR.
+The v1.1.2 release ZIP already includes the two open-source DLLs below. For the remaining files, supply them from your own verified build or a trusted existing WMMT6 1.03.04 client. Do not use files from WMMT6R or WMMT6RR.
 
 | File | Required SHA-256 |
 |---|---|
@@ -10,13 +10,15 @@ Supply these files from your own verified build, a trusted existing WMMT6 1.03.0
 | `server_wangan.crt` | `D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377` |
 | `server_wangan.key` | `56ABEB63F00A04D54D709253E5F0F13B35ED72D4C41262A0A40F8D8BEF557C2B` |
 
-You may place these files in this folder before setup. If one is absent, the
+You may place missing files in this folder before setup. If one is absent, the
 configurator checks the exact WMMT6/TeknoParrot installation you manually
 selected for an existing hash-matching copy. If none is found, it opens a file
 picker for that asset. It stops before modifying the client if the selected
 file has a different hash.
 
-The configurator never downloads or generates a DLL, certificate, or private
-key. It also never searches for or automatically selects a WMMT6 ROM.
+The configurator never generates a DLL, certificate, or private key. It also
+never searches for or automatically selects a WMMT6 ROM.
 
-Do not commit supplied binaries or key material to this repository. The repository `.gitignore` excludes them.
+Do not commit certificates or key material to this repository. The repository
+`.gitignore` excludes them. The DLLs distributed in the release are open-source;
+their notices and corresponding-source information are in `../third-party`.

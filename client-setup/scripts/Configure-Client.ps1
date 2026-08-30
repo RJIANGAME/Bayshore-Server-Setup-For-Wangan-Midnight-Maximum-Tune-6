@@ -161,7 +161,11 @@ $resolvedClientAssets = @{}
 foreach ($asset in $requiredClientAssets) {
     $assetPath = $null
     $candidatePaths = @((Join-Path $assetRoot $asset.Name)) + @($asset.Candidates)
-    foreach ($candidatePath in @($candidatePaths | Sort-Object -Unique)) {
+    $seenCandidatePaths = @{}
+    foreach ($candidatePath in $candidatePaths) {
+        $candidatePath = [IO.Path]::GetFullPath($candidatePath)
+        if ($seenCandidatePaths.ContainsKey($candidatePath)) { continue }
+        $seenCandidatePaths[$candidatePath] = $true
         if (-not (Test-Path -LiteralPath $candidatePath -PathType Leaf)) { continue }
         $candidateHash = (Get-FileHash -LiteralPath $candidatePath -Algorithm SHA256).Hash
         if ($candidateHash -eq $asset.Hash) {
