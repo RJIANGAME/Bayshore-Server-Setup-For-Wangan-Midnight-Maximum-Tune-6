@@ -29,8 +29,11 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
 4. auto-detect the active client adapter and router;
 5. back up and configure AMAuth, TeknoParrot, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity.
+6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
 The public repository does not redistribute the game, MaxiTerminal, compiled third-party DLLs, or key material. Place the verified files documented in [`client-setup/assets/README.md`](client-setup/assets/README.md) into the local `client-setup\assets` folder before running setup. All asset hashes are checked before any client file is changed.
+
+After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe` to start the configured profile in centered, monitor-aware 16:9 borderless mode.
 
 ## Player Data Backup, Restore, and Merge
 

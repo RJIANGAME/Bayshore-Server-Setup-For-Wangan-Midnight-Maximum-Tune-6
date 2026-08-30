@@ -23,7 +23,8 @@ The WMMT6 game folder must already contain its original `AMCUS` directory, inclu
 3. Enter the Bayshore server IPv4 address.
 4. Select the correct `wmn6r.exe` and `TeknoParrotUi.exe` when prompted.
 5. Wait for `WMMT6 client configuration completed successfully`.
-6. Start the server-side Bayshore and the single venue MaxiTerminal, then launch the configured WMMT6 profile.
+6. Start the server-side Bayshore and the single venue MaxiTerminal.
+7. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root, or launch the configured WMMT6 profile normally.
 
 ## What is configured
 
@@ -36,7 +37,10 @@ The WMMT6 game folder must already contain its original `AMCUS` directory, inclu
 - Windows hosts entries for ALL.Net;
 - the `225.0.0.1/32` multicast route on the active adapter;
 - scoped Windows Firewall rules;
-- `iauthdll.dll` registration.
+- `iauthdll.dll` registration;
+- `WMMT6-Borderless.bat` and its helper/config beside `TeknoParrotUi.exe`.
+
+The borderless BAT launches the exact configured WMMT6 profile, waits for the selected `wmn6r.exe`, removes the window frame, and centers a 16:9 game surface on its current monitor. A black backdrop fills unused space on non-16:9 displays. Closing the game closes the helper and backdrop automatically.
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
 

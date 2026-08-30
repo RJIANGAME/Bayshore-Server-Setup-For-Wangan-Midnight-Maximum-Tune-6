@@ -129,9 +129,14 @@ if ([string]$config.MaxiTerminalPath -ne 'DISABLED') {
 $gameRoot = Split-Path $gameExe -Parent
 $tpRoot = Split-Path $tpExe -Parent
 $amcus = Join-Path $gameRoot 'AMCUS'
+$borderlessSourceRoot = Join-Path $clientRoot 'borderless'
 
 foreach ($required in $gameExe, $tpExe, (Join-Path $amcus 'AMAuthd.exe'), (Join-Path $amcus 'AMConfig.ini'), (Join-Path $amcus 'iauthdll.dll')) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Required client file is missing: $required" }
+}
+foreach ($required in 'WMMT6-Borderless.bat', 'WMMT6-Borderless.ps1') {
+    $requiredPath = Join-Path $borderlessSourceRoot $required
+    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "Required borderless launcher file is missing: $requiredPath" }
 }
 
 $expectedGameHashes = @('92F02199A44FA65A35AF3ED162B5CE5477CFC8B2E3A13CCC95936356680F1479')
@@ -366,6 +371,18 @@ $customName = if ($config.PSObject.Properties.Name -contains 'CustomName' -and [
 Set-ProfileField 'CustomName' $customName $false
 $profile.Save($profilePath)
 
+$borderlessBat = Join-Path $tpRoot 'WMMT6-Borderless.bat'
+$borderlessScript = Join-Path $tpRoot 'WMMT6-Borderless.ps1'
+$borderlessConfig = Join-Path $tpRoot 'WMMT6-Borderless.json'
+foreach ($target in $borderlessBat, $borderlessScript, $borderlessConfig) { Backup-File $target }
+Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.bat') -Destination $borderlessBat -Force
+Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.ps1') -Destination $borderlessScript -Force
+$borderlessSettings = [ordered]@{
+    GameExecutable = $gameExe
+    ProfileFile = $baseProfile.Name
+}
+[IO.File]::WriteAllText($borderlessConfig, ($borderlessSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+
 if ($maxiExe) {
     $maxiConfigPath = Join-Path (Split-Path $maxiExe -Parent) 'config.json'
     Backup-File $maxiConfigPath
@@ -414,5 +431,6 @@ Write-Host 'WMMT6 client configuration completed successfully.' -ForegroundColor
 Write-Host "Backups: $backupRoot"
 Write-Host "Server: https://$($config.ServerIp):9002"
 Write-Host "TeknoParrot profile: $profilePath"
+Write-Host "Borderless launcher: $borderlessBat"
 Write-Host "Client identity: $identityPath"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: skipped (venue service; not required for client setup)' }
