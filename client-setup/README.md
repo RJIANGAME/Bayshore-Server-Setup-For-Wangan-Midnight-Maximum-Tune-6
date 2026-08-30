@@ -28,7 +28,7 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 5. If prompted, select each missing compatible client asset listed in `assets\README.md`.
 6. Wait for `WMMT6 client configuration completed successfully`.
 7. Start the server-side Bayshore and the single venue MaxiTerminal.
-8. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root. TeknoParrot starts WMMT6 and the profile's configured second executable; the helper does not start another AMAuth instance.
+8. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root. The helper starts AMAuth directly, then asks TeknoParrot to launch only WMMT6 through the generated `WMMT6-Bayshore.xml` profile.
 
 ## What is configured
 
@@ -37,14 +37,14 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - Shift-JIS-safe `AMConfig.ini` changes for MUCHA;
 - `WritableConfig.ini` with a unique drive serial;
 - a persistent, unique client/card identity;
-- a TeknoParrot-owned two-executable launch without editing `UserProfiles\WMMT6.xml`;
+- generated single-executable `GameProfiles` and `UserProfiles` copies without modifying the original WMMT6 profiles;
 - Windows hosts entries for ALL.Net;
 - the `225.0.0.1/32` multicast route on the active adapter;
 - scoped Windows Firewall rules;
 - `iauthdll.dll` registration;
 - `WMMT6-Borderless.bat` and its helper/config beside `TeknoParrotUi.exe`.
 
-The borderless BAT launches the existing WMMT6 profile without editing it and lets TeknoParrot own both configured executables. It waits for the selected `wmn6r.exe`, removes the window frame, and centers a 16:9 game surface on its current monitor. A black backdrop fills unused space on non-16:9 displays. Closing the game closes the helper and backdrop without terminating TeknoParrot-owned AMAuth processes.
+The borderless BAT starts `AMAuthd.exe` directly so OpenParrot is never injected into it, then launches the generated single-executable profile through TeknoParrot. It waits for the selected `wmn6r.exe`, removes the window frame, and centers a 16:9 game surface on its current monitor. Closing the game closes the helper, the AMAuth instance it started, and the backdrop. The original TeknoParrot profiles remain unchanged.
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
 

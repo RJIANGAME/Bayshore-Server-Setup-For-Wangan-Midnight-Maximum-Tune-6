@@ -1,6 +1,6 @@
 # Required client assets
 
-The v1.1.9 release ZIP includes all five verified files below. Do not replace them with files from WMMT6R, WMMT6RR, or a standard unrelated TeknoParrot installation.
+The v1.2.0 release ZIP includes all five verified files below. Do not replace them with files from WMMT6R, WMMT6RR, or a standard unrelated TeknoParrot installation.
 
 | File | Required SHA-256 |
 |---|---|

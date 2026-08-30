@@ -222,7 +222,7 @@ if ($preflightRequestedProfile -and $preflightRequestedProfile -ne 'AUTO') {
     else { throw "Requested TeknoParrot profile is missing: $preflightCandidate. No client files were changed." }
 } else {
     $preflightBaseProfile = Get-ChildItem -LiteralPath $preflightProfilesRoot -Filter '*.xml' -File |
-        Where-Object { $_.BaseName -match '(?i)(WMMT.?6|Wangan.*Maximum.*Tune.*6)' -and $_.BaseName -notmatch '(?i)(6R|6RR)' } |
+        Where-Object { $_.BaseName -match '(?i)(WMMT.?6|Wangan.*Maximum.*Tune.*6)' -and $_.BaseName -notmatch '(?i)(6R|6RR|Bayshore)' } |
         Sort-Object @{ Expression = { if ($_.BaseName -ieq 'WMMT6') { 0 } else { 1 } } }, Name |
         Select-Object -First 1
     if (-not $preflightBaseProfile) {
@@ -241,6 +241,17 @@ if (-not (Test-Path -LiteralPath $preflightUserProfile -PathType Leaf)) {
     throw "TeknoParrot user profile is missing: $preflightUserProfile. Configure WMMT6 once in TeknoParrot, then run setup again. No client files were changed."
 }
 $preflightProfileXml = [xml](Get-Content -LiteralPath $preflightUserProfile -Raw)
+$preflightProfileTexts = @(
+    [IO.File]::ReadAllText($preflightBaseProfile.FullName),
+    [IO.File]::ReadAllText($preflightUserProfile)
+)
+foreach ($profileText in $preflightProfileTexts) {
+    foreach ($fieldName in @('HasTwoExecutables', 'LaunchSecondExecutableFirst')) {
+        if (-not [regex]::IsMatch($profileText, "(?is)<$fieldName>\s*(true|false)\s*</$fieldName>")) {
+            throw "TeknoParrot profile lacks required launch field '$fieldName'. No client files were changed."
+        }
+    }
+}
 
 $preflightIdentityPath = Join-Path $clientRoot 'generated-client-identity.json'
 if (Test-Path -LiteralPath $preflightIdentityPath -PathType Leaf) {
@@ -343,7 +354,7 @@ if ($requestedProfile -and $requestedProfile -ne 'AUTO') {
     else { throw "Requested TeknoParrot profile is missing: $candidate" }
 } else {
     $baseProfile = Get-ChildItem -LiteralPath $gameProfilesRoot -Filter '*.xml' -File |
-        Where-Object { $_.BaseName -match '(?i)(WMMT.?6|Wangan.*Maximum.*Tune.*6)' -and $_.BaseName -notmatch '(?i)(6R|6RR)' } |
+        Where-Object { $_.BaseName -match '(?i)(WMMT.?6|Wangan.*Maximum.*Tune.*6)' -and $_.BaseName -notmatch '(?i)(6R|6RR|Bayshore)' } |
         Sort-Object @{ Expression = { if ($_.BaseName -ieq 'WMMT6') { 0 } else { 1 } } }, Name |
         Select-Object -First 1
     if (-not $baseProfile) {
@@ -403,6 +414,30 @@ $writablePath = Join-Path $amcus 'WritableConfig.ini'
 Backup-File $writablePath
 [IO.File]::WriteAllText($writablePath, "[RuntimeConfig]`r`nmode=`r`nnetID=1`r`nserialID=$($identity.DriveSerial)`r`n", [Text.UTF8Encoding]::new($false))
 
+# TeknoParrot's stock two-executable launch injects OpenParrot64.dll into
+# AMAuthd.exe on affected builds. Generate separate profile copies that launch
+# only wmn6r.exe, while preserving the user's original profiles unchanged.
+$launcherProfileName = "$($baseProfile.BaseName)-Bayshore.xml"
+$launcherGameProfile = Join-Path $gameProfilesRoot $launcherProfileName
+$launcherUserProfile = Join-Path (Join-Path $tpRoot 'UserProfiles') $launcherProfileName
+function Write-SingleExecutableProfileCopy([string]$Source, [string]$Destination) {
+    $reader = [IO.StreamReader]::new($Source, [Text.Encoding]::UTF8, $true)
+    try {
+        $text = $reader.ReadToEnd()
+        $sourceEncoding = $reader.CurrentEncoding
+    }
+    finally { $reader.Dispose() }
+    foreach ($fieldName in @('HasTwoExecutables', 'LaunchSecondExecutableFirst')) {
+        $pattern = "(?is)<$fieldName>\s*(true|false)\s*</$fieldName>"
+        if (-not [regex]::IsMatch($text, $pattern)) { throw "Profile lacks required launch field '$fieldName': $Source" }
+        $text = [regex]::Replace($text, $pattern, "<$fieldName>false</$fieldName>")
+    }
+    Backup-File $Destination
+    [IO.File]::WriteAllText($Destination, $text, $sourceEncoding)
+}
+Write-SingleExecutableProfileCopy $baseProfile.FullName $launcherGameProfile
+Write-SingleExecutableProfileCopy $profilePath $launcherUserProfile
+
 $borderlessBat = Join-Path $tpRoot 'WMMT6-Borderless.bat'
 $borderlessScript = Join-Path $tpRoot 'WMMT6-Borderless.ps1'
 $borderlessConfig = Join-Path $tpRoot 'WMMT6-Borderless.json'
@@ -411,7 +446,8 @@ Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.bat') 
 Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.ps1') -Destination $borderlessScript -Force
 $borderlessSettings = [ordered]@{
     GameExecutable = $gameExe
-    ProfileFile = $baseProfile.Name
+    AuthExecutable = (Join-Path $amcus 'AMAuthd.exe')
+    ProfileFile = $launcherProfileName
 }
 [IO.File]::WriteAllText($borderlessConfig, ($borderlessSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
@@ -503,6 +539,7 @@ Write-Host 'WMMT6 client configuration completed successfully.' -ForegroundColor
 Write-Host "Backups: $backupRoot"
 Write-Host "Server: https://$($config.ServerIp):9002"
 Write-Host "TeknoParrot profile (left unchanged): $profilePath"
+Write-Host "Generated single-executable profile: $launcherUserProfile"
 Write-Host "Borderless launcher: $borderlessBat"
 Write-Host "Client identity: $identityPath"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: skipped (venue service; not required for client setup)' }

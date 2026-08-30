@@ -28,12 +28,12 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 2. validate the address;
 3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
 4. auto-detect the active client adapter and router;
-5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity without editing TeknoParrot `UserProfiles` XML.
+5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity without modifying the existing TeknoParrot profile.
 6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
 The public release does not redistribute the game or MaxiTerminal. It includes all five verified client runtime/configuration assets, including the client terminal certificate/key pair, plus license and corresponding-source information for the open-source DLLs. The configurator performs a complete read-only preflight of every asset, WMMT6/AMCUS requirement, existing TeknoParrot WMMT6 profile, client identity, and network adapter before changing anything. Optional profile fields are not required, and `UserProfiles` XML is never modified. It does not scan for or automatically select a WMMT6 ROM.
 
-After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It launches the unchanged profile in centered, monitor-aware 16:9 borderless mode and lets TeknoParrot own both configured executables.
+After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth outside OpenParrot injection and launches WMMT6 through a generated single-executable profile in centered, monitor-aware 16:9 borderless mode.
 
 For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next hop). It uses `New-NetRoute` with its default active-and-persistent behavior and falls back to persistent `netsh` or `route.exe` syntax when necessary.
 
@@ -42,6 +42,8 @@ The client preflight also checks administrator rights and the x64 Visual C++ 201
 Client setup v1.1.8 fixes OpenParrot detection for the supported WMMT6 1.03.04 executable (CRC `7E804704`) and removes the extra Maxitune debug console from release builds.
 
 Client setup v1.1.9 leaves both WMMT6 executables under TeknoParrot's control. The borderless helper no longer starts or stops a second `AMAuthd.exe`, preventing duplicate OpenParrot injection and access-violation crashes on two-executable profiles.
+
+Client setup v1.2.0 supersedes v1.1.9 after crash evidence showed that TeknoParrot injected `OpenParrot64.dll` into `AMAuthd.exe`. It generates `WMMT6-Bayshore.xml` profile copies with the second executable disabled, starts AMAuth directly, and uses OpenParrot only for `wmn6r.exe`. Existing profiles remain unchanged.
 
 ## Player Data Backup, Restore, and Merge
 
@@ -585,7 +587,7 @@ Windowed:             1 while troubleshooting
 WhiteScreenFix:       enable only if required
 ```
 
-The universal `WMMT6-Borderless.bat` does not start AMAuthd itself. Keep the normal WMMT6 two-executable profile so TeknoParrot starts AMAuth exactly once. Only for a different external launcher that explicitly starts AMAuthd should TeknoParrot's second executable be disabled:
+The universal configurator preserves the normal WMMT6 profile and generates a separate `WMMT6-Bayshore.xml` copy. The generated profile uses these values because the borderless launcher starts AMAuth directly, outside OpenParrot injection:
 
 ```text
 HasTwoExecutables = false
