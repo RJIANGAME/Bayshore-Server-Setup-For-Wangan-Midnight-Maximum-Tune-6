@@ -4,3 +4,5 @@ client-setup/assets/*.crt
 client-setup/assets/*.key
 client-setup/backups/
 client-setup/generated-client-identity.json
+backups/
+*.dump

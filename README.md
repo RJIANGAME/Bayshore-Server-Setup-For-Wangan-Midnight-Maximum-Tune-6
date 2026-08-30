@@ -32,6 +32,20 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 
 The public repository does not redistribute the game, MaxiTerminal, compiled third-party DLLs, or key material. Place the verified files documented in [`client-setup/assets/README.md`](client-setup/assets/README.md) into the local `client-setup\assets` folder before running setup. All asset hashes are checked before any client file is changed.
 
+## Player Data Backup, Restore, and Merge
+
+The repository includes root-level database tools for the portable Bayshore server:
+
+| Tool | Result |
+|---|---|
+| `Backup-Player-Data.bat` | Creates `backups\bayshore-YYYYMMDD-HHMMSS.dump` under the Bayshore server root. |
+| `Restore-Player-Data.bat` | Lets the user select a dump, creates a safety backup, then deletes and atomically replaces the current save. |
+| `Merge-Player-Data.bat` | Lets the user select a dump, creates a safety backup, and imports previously unseen card IDs without replacing current players. |
+
+Keep the BAT files and `server-tools` folder together in the Bayshore server root. Restore requires typing `RESTORE`; merge requires typing `MERGE`. Both operations stop the Bayshore application while PostgreSQL is changed.
+
+The conservative merge imports core player/card progress and remaps database IDs. Duplicate cards and destination-wide crowns, events, rankings, rival history, and place/file records remain unchanged. Both databases must use the same Bayshore migration set. See [`server-tools/README.md`](server-tools/README.md) for the exact scope and recovery procedure.
+
 ## Quick Architecture
 
 ```text
