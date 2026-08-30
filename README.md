@@ -37,6 +37,8 @@ After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It s
 
 For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next hop). It uses `New-NetRoute` with its default active-and-persistent behavior and falls back to persistent `netsh` or `route.exe` syntax when necessary.
 
+The client preflight also checks administrator rights and the x64 Visual C++ 2010 SP1 runtime required by `iauthdll.dll`. Registration runs from the AMCUS directory; an existing COM registration is accepted only if its DLL hash matches the selected client DLL.
+
 ## Player Data Backup, Restore, and Merge
 
 The repository includes root-level database tools for the portable Bayshore server:

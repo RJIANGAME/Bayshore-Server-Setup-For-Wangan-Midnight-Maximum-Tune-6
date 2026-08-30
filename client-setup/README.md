@@ -17,6 +17,7 @@ The release ZIP includes all five verified client assets: the Bayshore-compatibl
 Every SHA-256 listed in [assets/README.md](assets/README.md) is verified before changing the client. No runtime file, certificate, or key needs to be selected separately when using the release ZIP.
 
 The WMMT6 game folder must already contain its original `AMCUS` directory, including `AMAuthd.exe`, `AMConfig.ini`, `iauthdll.dll`, and `MuchaBin\muchacd.exe`.
+The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required by `iauthdll.dll`; setup checks it during preflight.
 
 ## Run
 
@@ -57,3 +58,7 @@ The package never scans for or automatically selects a ROM when `GamePath` is `S
 The multicast route is created as an on-link route (`NextHop 0.0.0.0`). Setup
 uses the modern Windows networking command first and automatically falls back
 to persistent `netsh` or `route.exe` syntax on Windows versions that reject it.
+
+`iauthdll.dll` is registered from its AMCUS working directory. If Windows
+rejects re-registration, setup accepts an existing COM registration only when
+the registered DLL exists and its SHA-256 matches the selected client's DLL.

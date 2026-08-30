@@ -2,6 +2,11 @@
 param()
 
 $ErrorActionPreference = 'Stop'
+$currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$currentPrincipal = [Security.Principal.WindowsPrincipal]::new($currentIdentity)
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw 'Client setup must run as administrator. Right-click Configure-Client.bat and select Run as administrator.'
+}
 $clientRoot = Split-Path $PSScriptRoot -Parent
 $configPath = Join-Path $clientRoot 'client-config.json'
 $assetRoot = Join-Path $clientRoot 'assets'
@@ -246,6 +251,14 @@ if (Test-Path -LiteralPath $preflightIdentityPath -PathType Leaf) {
         throw "Existing client identity is invalid: $preflightIdentityPath. No client files were changed."
     }
 }
+$iauthDll = Join-Path $amcus 'iauthdll.dll'
+$msvcr100Candidates = @(
+    (Join-Path $env:WINDIR 'System32\msvcr100.dll'),
+    (Join-Path $amcus 'msvcr100.dll')
+)
+if (-not ($msvcr100Candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1)) {
+    throw 'iauthdll.dll requires the Microsoft Visual C++ 2010 SP1 x64 Redistributable (MSVCR100.dll). Install vcredist_x64.exe from https://www.microsoft.com/en-us/download/details.aspx?id=26999, restart Windows, and rerun setup. No client files were changed.'
+}
 if (-not (Get-NetIPAddress -AddressFamily IPv4 -IPAddress $config.AdapterIp -ErrorAction SilentlyContinue | Select-Object -First 1)) {
     throw "The selected client IPv4 address is not assigned to this computer: $($config.AdapterIp). No client files were changed."
 }
@@ -464,8 +477,27 @@ foreach ($entry in $firewallEntries) {
     }
 }
 
-& (Join-Path $env:WINDIR 'System32\regsvr32.exe') /s (Join-Path $amcus 'iauthdll.dll')
-if ($LASTEXITCODE -ne 0) { throw 'iauthdll.dll registration failed.' }
+$regsvr32 = Join-Path $env:WINDIR 'System32\regsvr32.exe'
+$regArguments = '/s "' + $iauthDll.Replace('"', '""') + '"'
+$regProcess = Start-Process -FilePath $regsvr32 -ArgumentList $regArguments -WorkingDirectory $amcus `
+    -WindowStyle Hidden -Wait -PassThru
+if ($regProcess.ExitCode -ne 0) {
+    $registeredIauthPath = $null
+    $iauthClsidPath = 'Registry::HKEY_CLASSES_ROOT\CLSID\{045A5150-D2B3-4590-A38B-C1158678E1AC}\InProcServer32'
+    try { $registeredIauthPath = [string](Get-Item -LiteralPath $iauthClsidPath -ErrorAction Stop).GetValue('') }
+    catch { }
+    $compatibleRegistration = $false
+    if ($registeredIauthPath -and (Test-Path -LiteralPath $registeredIauthPath -PathType Leaf)) {
+        $selectedIauthHash = (Get-FileHash -LiteralPath $iauthDll -Algorithm SHA256).Hash
+        $registeredIauthHash = (Get-FileHash -LiteralPath $registeredIauthPath -Algorithm SHA256).Hash
+        $compatibleRegistration = $selectedIauthHash -eq $registeredIauthHash
+    }
+    if ($compatibleRegistration) {
+        Write-Warning "iauthdll.dll re-registration returned exit code $($regProcess.ExitCode), but an identical compatible DLL is already registered at $registeredIauthPath. Continuing."
+    } else {
+        throw "iauthdll.dll registration failed with exit code $($regProcess.ExitCode). Install the Microsoft Visual C++ 2010 SP1 x64 Redistributable and check Windows registry permissions."
+    }
+}
 
 Write-Host ''
 Write-Host 'WMMT6 client configuration completed successfully.' -ForegroundColor Green
