@@ -12,7 +12,7 @@ The server address is validated before setup continues. The active client IPv4 a
 
 ## Required assets
 
-The release ZIP includes the Bayshore-compatible open-source `OpenParrot64.dll` and `bngrw.dll`. Their licenses and corresponding-source information are in [`third-party`](third-party). Setup checks these packaged copies first and automatically replaces incompatible standard versions after backing them up.
+The release ZIP includes the Bayshore-compatible open-source `OpenParrot64.dll` and `bngrw.dll`, plus the verified WMMT6 `setting.lua.gz`. The DLL licenses and corresponding-source information are in [`third-party`](third-party). Setup checks these packaged copies first and automatically replaces incompatible standard versions after backing them up.
 
 The other compatible files listed in [assets/README.md](assets/README.md) are not redistributed. Setup checks the exact WMMT6 installation you manually selected and opens a file picker for anything still missing. Every SHA-256 is verified before changing the client; no private key is downloaded or generated.
 

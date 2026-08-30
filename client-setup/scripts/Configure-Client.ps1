@@ -150,7 +150,7 @@ if ($gameHash -notin $expectedGameHashes) {
 $requiredClientAssets = @(
     @{ Name = 'OpenParrot64.dll'; Hash = 'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952'; Candidates = @((Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll')) },
     @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'; Candidates = @((Join-Path $gameRoot 'bngrw.dll')) },
-    @{ Name = 'setting.lua.gz'; Hash = 'ECD66886FAED12D6C02178B80EF569FF0570BF8D03770D574866BF42BB681F18'; Candidates = @((Join-Path $gameRoot 'TP\setting.lua.gz')) },
+    @{ Name = 'setting.lua.gz'; Hash = '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'; Candidates = @((Join-Path $gameRoot 'TP\setting.lua.gz')) },
     @{ Name = 'server_wangan.crt'; Hash = 'D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377'; Candidates = @(
         (Join-Path $gameRoot 'data_jp\network\certs\terminal-cert_v388.pem'),
         (Join-Path $gameRoot 'data_jp\network\certs\v388-ca-cert.pem')
@@ -237,7 +237,7 @@ function Install-VerifiedAsset([string]$Name, [string]$Destination, [string]$Exp
 
 Install-VerifiedAsset 'OpenParrot64.dll' (Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll') 'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952'
 Install-VerifiedAsset 'bngrw.dll' (Join-Path $gameRoot 'bngrw.dll') '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'
-Install-VerifiedAsset 'setting.lua.gz' (Join-Path $gameRoot 'TP\setting.lua.gz') 'ECD66886FAED12D6C02178B80EF569FF0570BF8D03770D574866BF42BB681F18'
+Install-VerifiedAsset 'setting.lua.gz' (Join-Path $gameRoot 'TP\setting.lua.gz') '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'
 
 foreach ($target in @(
     (Join-Path $gameRoot 'data_jp\network\certs\terminal-cert_v388.pem'),
