@@ -33,13 +33,15 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 
 The public release does not redistribute the game or MaxiTerminal. It includes all five verified client runtime/configuration assets, including the client terminal certificate/key pair, plus license and corresponding-source information for the open-source DLLs. The configurator performs a complete read-only preflight of every asset, WMMT6/AMCUS requirement, existing TeknoParrot WMMT6 profile, client identity, and network adapter before changing anything. Optional profile fields are not required, and `UserProfiles` XML is never modified. It does not scan for or automatically select a WMMT6 ROM.
 
-After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth itself, then launches the unchanged profile in centered, monitor-aware 16:9 borderless mode.
+After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It launches the unchanged profile in centered, monitor-aware 16:9 borderless mode and lets TeknoParrot own both configured executables.
 
 For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next hop). It uses `New-NetRoute` with its default active-and-persistent behavior and falls back to persistent `netsh` or `route.exe` syntax when necessary.
 
 The client preflight also checks administrator rights and the x64 Visual C++ 2010 SP1 runtime required by `iauthdll.dll`. Registration runs from the AMCUS directory; an existing COM registration is accepted only if its DLL hash matches the selected client DLL.
 
 Client setup v1.1.8 fixes OpenParrot detection for the supported WMMT6 1.03.04 executable (CRC `7E804704`) and removes the extra Maxitune debug console from release builds.
+
+Client setup v1.1.9 leaves both WMMT6 executables under TeknoParrot's control. The borderless helper no longer starts or stops a second `AMAuthd.exe`, preventing duplicate OpenParrot injection and access-violation crashes on two-executable profiles.
 
 ## Player Data Backup, Restore, and Merge
 
@@ -583,7 +585,7 @@ Windowed:             1 while troubleshooting
 WhiteScreenFix:       enable only if required
 ```
 
-If the external launcher starts AMAuthd, configure the profile so TeknoParrot does not start a second AMAuth instance:
+The universal `WMMT6-Borderless.bat` does not start AMAuthd itself. Keep the normal WMMT6 two-executable profile so TeknoParrot starts AMAuth exactly once. Only for a different external launcher that explicitly starts AMAuthd should TeknoParrot's second executable be disabled:
 
 ```text
 HasTwoExecutables = false

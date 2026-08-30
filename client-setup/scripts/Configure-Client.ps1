@@ -411,7 +411,6 @@ Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.bat') 
 Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.ps1') -Destination $borderlessScript -Force
 $borderlessSettings = [ordered]@{
     GameExecutable = $gameExe
-    AuthExecutable = (Join-Path $amcus 'AMAuthd.exe')
     ProfileFile = $baseProfile.Name
 }
 [IO.File]::WriteAllText($borderlessConfig, ($borderlessSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))

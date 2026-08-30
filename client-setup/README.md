@@ -28,7 +28,7 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 5. If prompted, select each missing compatible client asset listed in `assets\README.md`.
 6. Wait for `WMMT6 client configuration completed successfully`.
 7. Start the server-side Bayshore and the single venue MaxiTerminal.
-8. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root. This launcher starts AMAuth before the unchanged TeknoParrot profile.
+8. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root. TeknoParrot starts WMMT6 and the profile's configured second executable; the helper does not start another AMAuth instance.
 
 ## What is configured
 
@@ -37,14 +37,14 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - Shift-JIS-safe `AMConfig.ini` changes for MUCHA;
 - `WritableConfig.ini` with a unique drive serial;
 - a persistent, unique client/card identity;
-- an external AMAuth-first launcher without editing TeknoParrot `UserProfiles\WMMT6.xml`;
+- a TeknoParrot-owned two-executable launch without editing `UserProfiles\WMMT6.xml`;
 - Windows hosts entries for ALL.Net;
 - the `225.0.0.1/32` multicast route on the active adapter;
 - scoped Windows Firewall rules;
 - `iauthdll.dll` registration;
 - `WMMT6-Borderless.bat` and its helper/config beside `TeknoParrotUi.exe`.
 
-The borderless BAT starts `AMAuthd.exe`, launches the existing WMMT6 profile without editing it, waits for the selected `wmn6r.exe`, removes the window frame, and centers a 16:9 game surface on its current monitor. A black backdrop fills unused space on non-16:9 displays. Closing the game closes the helper, AMAuth instance, and backdrop automatically.
+The borderless BAT launches the existing WMMT6 profile without editing it and lets TeknoParrot own both configured executables. It waits for the selected `wmn6r.exe`, removes the window frame, and centers a 16:9 game surface on its current monitor. A black backdrop fills unused space on non-16:9 displays. Closing the game closes the helper and backdrop without terminating TeknoParrot-owned AMAuth processes.
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
 

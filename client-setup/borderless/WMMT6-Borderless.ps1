@@ -17,10 +17,8 @@ if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) { throw "Missing $
 if (-not (Test-Path -LiteralPath $teknoParrotExe -PathType Leaf)) { throw "Missing $teknoParrotExe." }
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
 $gameExe = [IO.Path]::GetFullPath([string]$config.GameExecutable)
-$authExe = [IO.Path]::GetFullPath([string]$config.AuthExecutable)
 $profileFile = [IO.Path]::GetFileName([string]$config.ProfileFile)
 if (-not (Test-Path -LiteralPath $gameExe -PathType Leaf)) { throw "Configured game executable is missing: $gameExe" }
-if (-not (Test-Path -LiteralPath $authExe -PathType Leaf)) { throw "Configured AMAuth executable is missing: $authExe" }
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "UserProfiles\$profileFile") -PathType Leaf)) {
     throw "Configured TeknoParrot profile is missing: $profileFile"
 }
@@ -80,27 +78,9 @@ function Get-ConfiguredGameProcess {
     return $null
 }
 
-function Get-ConfiguredAuthProcess {
-    foreach ($candidate in @(Get-Process -Name 'AMAuthd' -ErrorAction SilentlyContinue)) {
-        try {
-            if ([IO.Path]::GetFullPath($candidate.Path) -ieq $authExe) { return $candidate }
-        }
-        catch { }
-    }
-    return $null
-}
-
 $game = Get-ConfiguredGameProcess
-$startedAuth = $null
 if (-not $game) {
-    $auth = Get-ConfiguredAuthProcess
-    if (-not $auth) {
-        Write-Host "Starting AMAuth for Bayshore..."
-        $startedAuth = Start-Process -FilePath $authExe -WorkingDirectory (Split-Path $authExe -Parent) -WindowStyle Hidden -PassThru
-        Start-Sleep -Seconds 2
-        if ($startedAuth.HasExited) { throw "AMAuth exited before WMMT6 started (exit code $($startedAuth.ExitCode))." }
-    }
-    Write-Host "Launching TeknoParrot profile $profileFile..."
+    Write-Host "Launching TeknoParrot profile $profileFile (TeknoParrot owns WMMT6 and AMAuth startup)..."
     Start-Process -FilePath $teknoParrotExe -ArgumentList "--profile=$profileFile" -WorkingDirectory $PSScriptRoot
 }
 
@@ -180,5 +160,4 @@ finally {
             ($originalRect.Right - $originalRect.Left), ($originalRect.Bottom - $originalRect.Top), [uint32]0x0060
         )
     }
-    if ($startedAuth -and -not $startedAuth.HasExited) { Stop-Process -Id $startedAuth.Id -Force -ErrorAction SilentlyContinue }
 }
