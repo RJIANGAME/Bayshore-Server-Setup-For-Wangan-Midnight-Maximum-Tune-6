@@ -232,21 +232,10 @@ if ($preflightRequestedProfile -and $preflightRequestedProfile -ne 'AUTO') {
 }
 
 $preflightUserProfile = Join-Path (Join-Path $tpRoot 'UserProfiles') $preflightBaseProfile.Name
-$preflightProfileSource = if (Test-Path -LiteralPath $preflightUserProfile -PathType Leaf) { $preflightUserProfile } else { $preflightBaseProfile.FullName }
-[xml]$preflightProfile = Get-Content -LiteralPath $preflightProfileSource -Raw
-if (-not $preflightProfile.SelectSingleNode("//*[local-name()='GamePath']")) {
-    throw "TeknoParrot profile lacks GamePath: $preflightProfileSource. No client files were changed."
+if (-not (Test-Path -LiteralPath $preflightUserProfile -PathType Leaf)) {
+    throw "TeknoParrot user profile is missing: $preflightUserProfile. Configure WMMT6 once in TeknoParrot, then run setup again. No client files were changed."
 }
-foreach ($fieldName in @('TerminalMode', 'TerminalEmulator', 'Banapass Connection', 'WhiteScreenFix', 'Windowed', 'NetworkAdapterIP', 'RouterIP')) {
-    $preflightField = $null
-    foreach ($field in $preflightProfile.SelectNodes("//*[local-name()='FieldInformation']")) {
-        $nameNode = $field.SelectSingleNode("./*[local-name()='FieldName']")
-        if ($nameNode -and $nameNode.InnerText -eq $fieldName) { $preflightField = $field; break }
-    }
-    if (-not $preflightField -or -not $preflightField.SelectSingleNode("./*[local-name()='FieldValue']")) {
-        throw "TeknoParrot profile lacks required field '$fieldName': $preflightProfileSource. No client files were changed."
-    }
-}
+$preflightProfileXml = [xml](Get-Content -LiteralPath $preflightUserProfile -Raw)
 
 $preflightIdentityPath = Join-Path $clientRoot 'generated-client-identity.json'
 if (Test-Path -LiteralPath $preflightIdentityPath -PathType Leaf) {
@@ -356,44 +345,7 @@ if ($requestedProfile -and $requestedProfile -ne 'AUTO') {
 }
 
 $profilePath = Join-Path (Join-Path $tpRoot 'UserProfiles') $baseProfile.Name
-if (-not (Test-Path -LiteralPath $profilePath)) {
-    New-Item -ItemType Directory -Force -Path (Split-Path $profilePath -Parent) | Out-Null
-    Copy-Item -LiteralPath $baseProfile.FullName -Destination $profilePath
-}
-Backup-File $profilePath
-[xml]$profile = Get-Content -LiteralPath $profilePath -Raw
-
-function Set-XmlElement([string]$Name, [string]$Value, [bool]$CreateIfMissing = $false) {
-    $node = $profile.SelectSingleNode("//*[local-name()='$Name']")
-    if (-not $node -and $CreateIfMissing) {
-        $node = $profile.CreateElement($Name, $profile.DocumentElement.NamespaceURI)
-        $gamePathNode = $profile.SelectSingleNode("//*[local-name()='GamePath']")
-        if ($gamePathNode -and $gamePathNode.ParentNode -eq $profile.DocumentElement) {
-            [void]$profile.DocumentElement.InsertAfter($node, $gamePathNode)
-        } else {
-            [void]$profile.DocumentElement.AppendChild($node)
-        }
-    }
-    if (-not $node) { throw "TeknoParrot profile lacks $Name." }
-    $node.InnerText = $Value
-}
-function Get-ProfileField([string]$Name) {
-    foreach ($field in $profile.SelectNodes("//*[local-name()='FieldInformation']")) {
-        $nameNode = $field.SelectSingleNode("./*[local-name()='FieldName']")
-        if ($nameNode -and $nameNode.InnerText -eq $Name) { return $field }
-    }
-    return $null
-}
-function Set-ProfileField([string]$Name, [string]$Value, [bool]$Required = $true) {
-    $field = Get-ProfileField $Name
-    if (-not $field) {
-        if ($Required) { throw "TeknoParrot profile lacks field '$Name'." }
-        return
-    }
-    $valueNode = $field.SelectSingleNode("./*[local-name()='FieldValue']")
-    if (-not $valueNode) { throw "TeknoParrot field '$Name' lacks FieldValue." }
-    $valueNode.InnerText = $Value
-}
+if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw "TeknoParrot user profile disappeared during setup: $profilePath" }
 
 $identityPath = Join-Path $clientRoot 'generated-client-identity.json'
 $cardPath = Join-Path $gameRoot 'card.ini'
@@ -410,16 +362,6 @@ if (Test-Path -LiteralPath $identityPath -PathType Leaf) {
         if ($accessMatch.Success -and $cardMatch.Success) {
             $accessCode = $accessMatch.Groups[1].Value
             $cardId = $cardMatch.Groups[1].Value.ToUpperInvariant()
-        }
-    }
-    if (-not $accessCode -or -not $cardId) {
-        $accessField = Get-ProfileField 'AccessCode'
-        $cardField = Get-ProfileField 'Card ID'
-        $profileAccess = if ($accessField) { [string]$accessField.SelectSingleNode("./*[local-name()='FieldValue']").InnerText } else { '' }
-        $profileCard = if ($cardField) { [string]$cardField.SelectSingleNode("./*[local-name()='FieldValue']").InnerText } else { '' }
-        if ($profileAccess -match '^\d{20}$' -and $profileCard -match '^[0-9A-Fa-f]{32}$') {
-            $accessCode = $profileAccess
-            $cardId = $profileCard.ToUpperInvariant()
         }
     }
     if (-not $accessCode -or -not $cardId) {
@@ -448,28 +390,6 @@ $writablePath = Join-Path $amcus 'WritableConfig.ini'
 Backup-File $writablePath
 [IO.File]::WriteAllText($writablePath, "[RuntimeConfig]`r`nmode=`r`nnetID=1`r`nserialID=$($identity.DriveSerial)`r`n", [Text.UTF8Encoding]::new($false))
 
-Set-XmlElement 'GamePath' $gameExe
-Set-XmlElement 'GamePath2' (Join-Path $amcus 'AMAuthd.exe') $true
-Set-XmlElement 'HasTwoExecutables' 'true' $true
-Set-XmlElement 'LaunchSecondExecutableFirst' 'true' $true
-Set-XmlElement 'ExecutableName2' 'amauthd.exe' $true
-Set-ProfileField 'TerminalMode' '0'
-Set-ProfileField 'TerminalEmulator' '1'
-Set-ProfileField 'Banapass Connection' '1'
-Set-ProfileField 'WhiteScreenFix' '1'
-Set-ProfileField 'Windowed' '1'
-Set-ProfileField 'NetworkAdapterIP' $config.AdapterIp
-Set-ProfileField 'RouterIP' $config.RouterIp
-Set-ProfileField 'AccessCode' ([string]$identity.AccessCode) $false
-Set-ProfileField 'Card ID' ([string]$identity.CardId) $false
-$customName = if ($config.PSObject.Properties.Name -contains 'CustomName' -and [string]$config.CustomName -ne 'AUTO') {
-    [string]$config.CustomName
-} else {
-    'CAB' + ([string]$identity.AccessCode).Substring(16, 4)
-}
-Set-ProfileField 'CustomName' $customName $false
-$profile.Save($profilePath)
-
 $borderlessBat = Join-Path $tpRoot 'WMMT6-Borderless.bat'
 $borderlessScript = Join-Path $tpRoot 'WMMT6-Borderless.ps1'
 $borderlessConfig = Join-Path $tpRoot 'WMMT6-Borderless.json'
@@ -478,6 +398,7 @@ Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.bat') 
 Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.ps1') -Destination $borderlessScript -Force
 $borderlessSettings = [ordered]@{
     GameExecutable = $gameExe
+    AuthExecutable = (Join-Path $amcus 'AMAuthd.exe')
     ProfileFile = $baseProfile.Name
 }
 [IO.File]::WriteAllText($borderlessConfig, ($borderlessSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
@@ -529,7 +450,7 @@ Write-Host ''
 Write-Host 'WMMT6 client configuration completed successfully.' -ForegroundColor Green
 Write-Host "Backups: $backupRoot"
 Write-Host "Server: https://$($config.ServerIp):9002"
-Write-Host "TeknoParrot profile: $profilePath"
+Write-Host "TeknoParrot profile (left unchanged): $profilePath"
 Write-Host "Borderless launcher: $borderlessBat"
 Write-Host "Client identity: $identityPath"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: skipped (venue service; not required for client setup)' }

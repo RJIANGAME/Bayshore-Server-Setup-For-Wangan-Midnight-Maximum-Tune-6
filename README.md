@@ -28,12 +28,12 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 2. validate the address;
 3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
 4. auto-detect the active client adapter and router;
-5. back up and configure AMAuth, TeknoParrot, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity.
+5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity without editing TeknoParrot `UserProfiles` XML.
 6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
-The public release does not redistribute the game or MaxiTerminal. It includes all five verified client runtime/configuration assets, including the client terminal certificate/key pair, plus license and corresponding-source information for the open-source DLLs. The configurator performs a complete read-only preflight of every asset, WMMT6/AMCUS requirement, TeknoParrot profile field, existing identity, and network adapter before changing anything. It does not scan for or automatically select a WMMT6 ROM.
+The public release does not redistribute the game or MaxiTerminal. It includes all five verified client runtime/configuration assets, including the client terminal certificate/key pair, plus license and corresponding-source information for the open-source DLLs. The configurator performs a complete read-only preflight of every asset, WMMT6/AMCUS requirement, existing TeknoParrot WMMT6 profile, client identity, and network adapter before changing anything. Optional profile fields are not required, and `UserProfiles` XML is never modified. It does not scan for or automatically select a WMMT6 ROM.
 
-After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe` to start the configured profile in centered, monitor-aware 16:9 borderless mode.
+After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth itself, then launches the unchanged profile in centered, monitor-aware 16:9 borderless mode.
 
 ## Player Data Backup, Restore, and Merge
 
