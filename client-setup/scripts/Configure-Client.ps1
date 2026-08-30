@@ -69,11 +69,13 @@ function Resolve-ExecutablePath(
     }
 
     $detected = @()
-    foreach ($drive in Get-PSDrive -PSProvider FileSystem) {
-        foreach ($relative in $RelativeCandidates) {
-            $candidate = Join-Path $drive.Root $relative
-            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-                $detected += [IO.Path]::GetFullPath($candidate)
+    if (-not $forceSelection) {
+        foreach ($drive in Get-PSDrive -PSProvider FileSystem) {
+            foreach ($relative in $RelativeCandidates) {
+                $candidate = Join-Path $drive.Root $relative
+                if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                    $detected += [IO.Path]::GetFullPath($candidate)
+                }
             }
         }
     }
@@ -146,21 +148,48 @@ if ($gameHash -notin $expectedGameHashes) {
 }
 
 $requiredClientAssets = @(
-    @{ Name = 'OpenParrot64.dll'; Hash = 'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952' },
-    @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74' },
-    @{ Name = 'setting.lua.gz'; Hash = 'ECD66886FAED12D6C02178B80EF569FF0570BF8D03770D574866BF42BB681F18' },
-    @{ Name = 'server_wangan.crt'; Hash = 'D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377' },
-    @{ Name = 'server_wangan.key'; Hash = '56ABEB63F00A04D54D709253E5F0F13B35ED72D4C41262A0A40F8D8BEF557C2B' }
+    @{ Name = 'OpenParrot64.dll'; Hash = 'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952'; Candidates = @((Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll')) },
+    @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'; Candidates = @((Join-Path $gameRoot 'bngrw.dll')) },
+    @{ Name = 'setting.lua.gz'; Hash = 'ECD66886FAED12D6C02178B80EF569FF0570BF8D03770D574866BF42BB681F18'; Candidates = @((Join-Path $gameRoot 'TP\setting.lua.gz')) },
+    @{ Name = 'server_wangan.crt'; Hash = 'D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377'; Candidates = @(
+        (Join-Path $gameRoot 'data_jp\network\certs\terminal-cert_v388.pem'),
+        (Join-Path $gameRoot 'data_jp\network\certs\v388-ca-cert.pem')
+    ) },
+    @{ Name = 'server_wangan.key'; Hash = '56ABEB63F00A04D54D709253E5F0F13B35ED72D4C41262A0A40F8D8BEF557C2B'; Candidates = @((Join-Path $gameRoot 'data_jp\network\private\terminal-key_v388.pem')) }
 )
+$resolvedClientAssets = @{}
 foreach ($asset in $requiredClientAssets) {
-    $assetPath = Join-Path $assetRoot $asset.Name
-    if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
-        throw "Required client asset is missing: $assetPath"
+    $assetPath = $null
+    $candidatePaths = @((Join-Path $assetRoot $asset.Name)) + @($asset.Candidates)
+    foreach ($candidatePath in @($candidatePaths | Sort-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $candidatePath -PathType Leaf)) { continue }
+        $candidateHash = (Get-FileHash -LiteralPath $candidatePath -Algorithm SHA256).Hash
+        if ($candidateHash -eq $asset.Hash) {
+            $assetPath = [IO.Path]::GetFullPath($candidatePath)
+            Write-Host "Using verified $($asset.Name): $assetPath"
+            break
+        }
+        Write-Warning "Ignoring incompatible $($asset.Name) at $candidatePath (SHA-256 $candidateHash)."
     }
-    $assetHash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash
-    if ($assetHash -ne $asset.Hash) {
-        throw "Client asset hash mismatch: $($asset.Name)"
+
+    if (-not $assetPath) {
+        Add-Type -AssemblyName System.Windows.Forms
+        $picker = New-Object System.Windows.Forms.OpenFileDialog
+        $picker.Title = "Select compatible $($asset.Name)"
+        $picker.Filter = 'Compatible client files (*.dll;*.gz;*.crt;*.key;*.pem)|*.dll;*.gz;*.crt;*.key;*.pem|All files (*.*)|*.*'
+        $picker.FileName = $asset.Name
+        $picker.CheckFileExists = $true
+        if ($picker.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+            throw "Compatible $($asset.Name) was not selected. Required SHA-256: $($asset.Hash)"
+        }
+        $selectedHash = (Get-FileHash -LiteralPath $picker.FileName -Algorithm SHA256).Hash
+        if ($selectedHash -ne $asset.Hash) {
+            throw "Selected $($asset.Name) is incompatible. Expected SHA-256 $($asset.Hash), received $selectedHash."
+        }
+        $assetPath = [IO.Path]::GetFullPath($picker.FileName)
+        Write-Host "Using selected verified $($asset.Name): $assetPath"
     }
+    $resolvedClientAssets[$asset.Name] = $assetPath
 }
 
 $backupRoot = Join-Path $clientRoot ("backups\{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -189,10 +218,14 @@ function New-RandomHex([int]$ByteCount) {
 }
 
 function Install-VerifiedAsset([string]$Name, [string]$Destination, [string]$ExpectedHash) {
-    $source = Join-Path $assetRoot $Name
-    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Package asset is missing: $source" }
+    $source = [string]$resolvedClientAssets[$Name]
+    if (-not $source -or -not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Resolved client asset is missing: $Name" }
     $actual = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash
-    if ($actual -ne $ExpectedHash) { throw "Package asset hash mismatch: $Name" }
+    if ($actual -ne $ExpectedHash) { throw "Resolved client asset hash mismatch: $Name" }
+    if ([IO.Path]::GetFullPath($source) -eq [IO.Path]::GetFullPath($Destination)) {
+        Write-Host "Existing destination is already verified: $Destination"
+        return
+    }
     Backup-File $Destination
     New-Item -ItemType Directory -Force -Path (Split-Path $Destination -Parent) | Out-Null
     Copy-Item -LiteralPath $source -Destination $Destination -Force
@@ -206,14 +239,10 @@ foreach ($target in @(
     (Join-Path $gameRoot 'data_jp\network\certs\terminal-cert_v388.pem'),
     (Join-Path $gameRoot 'data_jp\network\certs\v388-ca-cert.pem')
 )) {
-    Backup-File $target
-    New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'server_wangan.crt') -Destination $target -Force
+    Install-VerifiedAsset 'server_wangan.crt' $target 'D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377'
 }
 $keyTarget = Join-Path $gameRoot 'data_jp\network\private\terminal-key_v388.pem'
-Backup-File $keyTarget
-New-Item -ItemType Directory -Force -Path (Split-Path $keyTarget -Parent) | Out-Null
-Copy-Item -LiteralPath (Join-Path $assetRoot 'server_wangan.key') -Destination $keyTarget -Force
+Install-VerifiedAsset 'server_wangan.key' $keyTarget '56ABEB63F00A04D54D709253E5F0F13B35ED72D4C41262A0A40F8D8BEF557C2B'
 
 $encoding = [Text.Encoding]::GetEncoding(932)
 $amConfigPath = Join-Path $amcus 'AMConfig.ini'

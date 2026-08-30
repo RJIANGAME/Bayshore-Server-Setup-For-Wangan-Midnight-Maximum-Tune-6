@@ -10,6 +10,13 @@ Supply these files from your own verified build, a trusted existing WMMT6 1.03.0
 | `server_wangan.crt` | `D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377` |
 | `server_wangan.key` | `56ABEB63F00A04D54D709253E5F0F13B35ED72D4C41262A0A40F8D8BEF557C2B` |
 
-The configurator stops before modifying the client if a file is missing or has a different hash.
+You may place these files in this folder before setup. If one is absent, the
+configurator checks the exact WMMT6/TeknoParrot installation you manually
+selected for an existing hash-matching copy. If none is found, it opens a file
+picker for that asset. It stops before modifying the client if the selected
+file has a different hash.
+
+The configurator never downloads or generates a DLL, certificate, or private
+key. It also never searches for or automatically selects a WMMT6 ROM.
 
 Do not commit supplied binaries or key material to this repository. The repository `.gitignore` excludes them.

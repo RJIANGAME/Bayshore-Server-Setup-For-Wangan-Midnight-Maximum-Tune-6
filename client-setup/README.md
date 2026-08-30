@@ -12,7 +12,7 @@ The server address is validated before setup continues. The active client IPv4 a
 
 ## Required assets
 
-Before running setup, place the five compatible files listed in [assets/README.md](assets/README.md) inside the `assets` folder. They are intentionally not redistributed here. Setup verifies every SHA-256 hash before changing the client.
+The five compatible files listed in [assets/README.md](assets/README.md) are intentionally not redistributed here. Setup first checks the `assets` folder and the exact WMMT6/TeknoParrot installation you manually selected. If a required compatible file is still unavailable, setup opens a file picker for it. Every SHA-256 is verified before changing the client; no DLL or private key is downloaded or generated.
 
 The WMMT6 game folder must already contain its original `AMCUS` directory, including `AMAuthd.exe`, `AMConfig.ini`, `iauthdll.dll`, and `MuchaBin\muchacd.exe`.
 
@@ -22,9 +22,10 @@ The WMMT6 game folder must already contain its original `AMCUS` directory, inclu
 2. Right-click `Configure-Client.bat` and select **Run as administrator**.
 3. Enter the Bayshore server IPv4 address.
 4. Select the correct `wmn6r.exe` and `TeknoParrotUi.exe` when prompted.
-5. Wait for `WMMT6 client configuration completed successfully`.
-6. Start the server-side Bayshore and the single venue MaxiTerminal.
-7. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root, or launch the configured WMMT6 profile normally.
+5. If prompted, select each missing compatible client asset listed in `assets\README.md`.
+6. Wait for `WMMT6 client configuration completed successfully`.
+7. Start the server-side Bayshore and the single venue MaxiTerminal.
+8. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root, or launch the configured WMMT6 profile normally.
 
 ## What is configured
 
@@ -49,3 +50,4 @@ MaxiTerminal is not installed on each client. Normally, one compatible MaxiTermi
 ## Supported version
 
 This package accepts only the known WMMT6 1.03.04 `wmn6r.exe` hash. It does not support WMMT6R or WMMT6RR.
+The package never scans for or automatically selects a ROM when `GamePath` is `SELECT` (the default).
