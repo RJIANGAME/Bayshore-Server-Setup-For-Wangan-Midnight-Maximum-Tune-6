@@ -1,0 +1,6 @@
+client-setup/assets/*.dll
+client-setup/assets/*.gz
+client-setup/assets/*.crt
+client-setup/assets/*.key
+client-setup/backups/
+client-setup/generated-client-identity.json

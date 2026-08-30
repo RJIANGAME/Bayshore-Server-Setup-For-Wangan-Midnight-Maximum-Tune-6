@@ -1,0 +1,11 @@
+{
+  "ServerIp": "PROMPT",
+  "AdapterIp": "AUTO",
+  "RouterIp": "AUTO",
+  "GamePath": "SELECT",
+  "TeknoParrotPath": "SELECT",
+  "MaxiTerminalPath": "DISABLED",
+  "ProfileName": "AUTO",
+  "DriveSerial": "AUTO",
+  "CustomName": "AUTO"
+}

@@ -18,6 +18,20 @@
 > [!CAUTION]
 > Use only a clean Japanese WMMT6 game dump that you are legally entitled to possess. This guide does not provide or authorize distribution of copyrighted game data.
 
+## Universal Client Configurator
+
+The repository now includes a [client-only configurator](client-setup) for a new cabinet that already has TeknoParrot and a legally obtained Japanese WMMT6 1.03.04 installation. The client does not need the full Bayshore source tree, Node.js, or PostgreSQL.
+
+Run `client-setup\Configure-Client.bat` as administrator. Setup will:
+
+1. ask the user to type the Bayshore server IPv4 address;
+2. validate the address;
+3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
+4. auto-detect the active client adapter and router;
+5. back up and configure AMAuth, TeknoParrot, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity.
+
+The public repository does not redistribute the game, MaxiTerminal, compiled third-party DLLs, or key material. Place the verified files documented in [`client-setup/assets/README.md`](client-setup/assets/README.md) into the local `client-setup\assets` folder before running setup. All asset hashes are checked before any client file is changed.
+
 ## Quick Architecture
 
 ```text
@@ -37,6 +51,7 @@ A one-PC deployment still requires a stable IPv4 address on the physical LAN ada
 
 ## Table of Contents
 
+- [Universal Client Configurator](#universal-client-configurator)
 - [1. INSTALLATION WORKSHEET](#1-installation-worksheet)
 - [2. COMPATIBILITY AND KNOWN-GOOD TARGET](#2-compatibility-and-known-good-target)
 - [3. ARCHITECTURE AND PORT MAP](#3-architecture-and-port-map)
