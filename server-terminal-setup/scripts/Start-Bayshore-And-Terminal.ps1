@@ -38,8 +38,22 @@ if ($pgRoot -and (Test-Path -LiteralPath $pgData -PathType Container)) {
     if ($LASTEXITCODE -ne 0) {
         $dataRoot = Join-Path $applicationRoot '.data'
         New-Item -ItemType Directory -Path $dataRoot -Force | Out-Null
-        & (Join-Path $pgRoot 'bin\pg_ctl.exe') -D $pgData -l (Join-Path $dataRoot 'postgres.log') -o '-h 127.0.0.1 -p 5432' start
-        if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL failed to start.' }
+        $pgCtl = Join-Path $pgRoot 'bin\pg_ctl.exe'
+        $pgLog = Join-Path $dataRoot 'postgres.log'
+        $quotedData = '"' + $pgData.Replace('"', '\"') + '"'
+        $quotedLog = '"' + $pgLog.Replace('"', '\"') + '"'
+        $pgOptions = '"-h 127.0.0.1 -p 5432"'
+        $pgArguments = "start -D $quotedData -l $quotedLog -w -o $pgOptions"
+        # Keep PostgreSQL out of the interactive launcher's console process
+        # group. Closing the BAT window must not send Ctrl+C to postgres.
+        $pgStart = Start-Process -FilePath $pgCtl -ArgumentList $pgArguments `
+            -WindowStyle Hidden -PassThru
+        if (-not $pgStart.WaitForExit(30000)) {
+            try { $pgStart.Kill() } catch { }
+            throw 'PostgreSQL startup timed out.'
+        }
+        $pgStart.Refresh()
+        if ($pgStart.ExitCode -ne 0) { throw "PostgreSQL failed to start (pg_ctl exit $($pgStart.ExitCode))." }
     }
 }
 

@@ -9,3 +9,4 @@ server-terminal-setup/watchdog.pid
 server-terminal-setup/watchdog.log
 backups/
 *.dump
+__pycache__/

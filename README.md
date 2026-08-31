@@ -80,6 +80,12 @@ Keep the BAT files and `server-tools` folder together in the Bayshore server roo
 
 The conservative merge imports core player/card progress and remaps database IDs. Duplicate cards and destination-wide crowns, events, rankings, rival history, and place/file records remain unchanged. Both databases must use the same Bayshore migration set. See [`server-tools/README.md`](server-tools/README.md) for the exact scope and recovery procedure.
 
+## Graphical Database Editor
+
+`Bayshore-Database-Editor.bat` opens a dependency-free Python/Tkinter table browser for the portable PostgreSQL database. It reads the existing `.env`, uses the bundled PostgreSQL tools, supports paginated browsing, search, primary-key-targeted cell edits, inserts, deletes, and an advanced SQL console.
+
+Safety backups are enabled by default before every write and are stored under `backups` with a `before-db-editor-` prefix. Stop Bayshore and MaxiTerminal before changing player data, but leave PostgreSQL running so the editor can connect. See [`database-editor/README.md`](database-editor/README.md).
+
 ## Quick Architecture
 
 ```text
@@ -100,6 +106,7 @@ A one-PC deployment still requires a stable IPv4 address on the physical LAN ada
 ## Table of Contents
 
 - [Universal Client Configurator](#universal-client-configurator)
+- [Graphical Database Editor](#graphical-database-editor)
 - [1. INSTALLATION WORKSHEET](#1-installation-worksheet)
 - [2. COMPATIBILITY AND KNOWN-GOOD TARGET](#2-compatibility-and-known-good-target)
 - [3. ARCHITECTURE AND PORT MAP](#3-architecture-and-port-map)
