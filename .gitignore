@@ -4,5 +4,8 @@ client-setup/assets/*.crt
 client-setup/assets/*.key
 client-setup/backups/
 client-setup/generated-client-identity.json
+server-terminal-setup/server-terminal.json
+server-terminal-setup/watchdog.pid
+server-terminal-setup/watchdog.log
 backups/
 *.dump

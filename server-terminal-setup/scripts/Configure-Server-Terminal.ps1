@@ -113,6 +113,10 @@ $installedConfig = [ordered]@{
     ServicePort = $servicePort
     MaxiTerminalPath = $terminalExe
     MaxiTerminalSha256 = $expectedMaxiHash
+    WatchdogEnabled = $true
+    IdleRestartMinutes = 60
+    HealthCheckSeconds = 30
+    HealthFailureThreshold = 3
 }
 [IO.File]::WriteAllText((Join-Path $setupRoot 'server-terminal.json'), ($installedConfig | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
