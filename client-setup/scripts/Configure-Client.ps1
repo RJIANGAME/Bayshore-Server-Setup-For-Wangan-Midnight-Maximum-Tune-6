@@ -152,16 +152,11 @@ if ([string]$config.MaxiTerminalPath -ne 'DISABLED') {
 $gameRoot = Split-Path $gameExe -Parent
 $tpRoot = Split-Path $tpExe -Parent
 $amcus = Join-Path $gameRoot 'AMCUS'
-$borderlessSourceRoot = Join-Path $clientRoot 'borderless'
+$launcherSourceRoot = Join-Path $clientRoot 'launcher'
 
 foreach ($required in $gameExe, $tpExe, (Join-Path $amcus 'AMAuthd.exe'), (Join-Path $amcus 'AMConfig.ini'), (Join-Path $amcus 'iauthdll.dll'), (Join-Path $amcus 'MuchaBin\muchacd.exe')) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Required client file is missing: $required" }
 }
-foreach ($required in 'WMMT6-Borderless.bat', 'WMMT6-Borderless.ps1') {
-    $requiredPath = Join-Path $borderlessSourceRoot $required
-    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "Required borderless launcher file is missing: $requiredPath" }
-}
-
 $expectedGameHashes = @('92F02199A44FA65A35AF3ED162B5CE5477CFC8B2E3A13CCC95936356680F1479')
 $gameHash = (Get-FileHash -LiteralPath $gameExe -Algorithm SHA256).Hash
 if ($gameHash -notin $expectedGameHashes) {
@@ -188,6 +183,10 @@ $openParrotAscii = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($ins
 $embeddedAuthSerials = @([regex]::Matches($openParrotAscii, '2808119900\d{2}') | ForEach-Object Value | Sort-Object -Unique)
 if ($embeddedAuthSerials.Count -ne 1) {
     throw "Could not identify exactly one WMMT6 AMAuth serial in OpenParrot64.dll. Found: $($embeddedAuthSerials -join ', '). Restore or rebuild a compatible Project Asakura OpenParrot DLL."
+}
+foreach ($required in 'WMMT6-Launch.bat', 'WMMT6-Launch.ps1') {
+    $requiredPath = Join-Path $launcherSourceRoot $required
+    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "Required safe launcher file is missing: $requiredPath" }
 }
 $embeddedAuthSerial = [string]$embeddedAuthSerials[0]
 $configuredDriveSerial = if ($config.PSObject.Properties.Name -contains 'DriveSerial') { [string]$config.DriveSerial } else { 'AUTO' }
@@ -513,7 +512,7 @@ function Set-TeknoParrotField([string]$Name, [string]$Value, [string]$Category =
 Set-TeknoParrotField 'TerminalMode' '0'
 Set-TeknoParrotField 'TerminalEmulator' '1'
 Set-TeknoParrotField 'Banapass Connection' '1'
-Set-TeknoParrotField 'WhiteScreenFix' '0'
+Set-TeknoParrotField 'WhiteScreenFix' '1'
 Set-TeknoParrotField 'Windowed' '0'
 Set-TeknoParrotField 'NetworkAdapterIP' ([string]$config.AdapterIp)
 Set-TeknoParrotField 'RouterIP' ([string]$config.RouterIp) 'Network'
@@ -541,18 +540,36 @@ foreach ($obsoleteProfile in @(
 $identity.ProfileFile = $baseProfile.Name
 [IO.File]::WriteAllText($identityPath, ($identity | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
-$borderlessBat = Join-Path $tpRoot 'WMMT6-Borderless.bat'
-$borderlessScript = Join-Path $tpRoot 'WMMT6-Borderless.ps1'
-$borderlessConfig = Join-Path $tpRoot 'WMMT6-Borderless.json'
-foreach ($target in $borderlessBat, $borderlessScript, $borderlessConfig) { Backup-File $target }
-Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.bat') -Destination $borderlessBat -Force
-Copy-Item -LiteralPath (Join-Path $borderlessSourceRoot 'WMMT6-Borderless.ps1') -Destination $borderlessScript -Force
-$borderlessSettings = [ordered]@{
+# Install a minimal default launcher. It starts AMAuth directly and lets
+# TeknoParrot launch/inject only wmn6r.exe. WhiteScreenFix remains enabled in
+# OpenParrot, while this launcher never changes resolution or window styles.
+$safeLauncherBat = Join-Path $tpRoot 'WMMT6-Launch.bat'
+$safeLauncherScript = Join-Path $tpRoot 'WMMT6-Launch.ps1'
+$safeLauncherConfig = Join-Path $tpRoot 'WMMT6-Launch.json'
+foreach ($target in $safeLauncherBat, $safeLauncherScript, $safeLauncherConfig) { Backup-File $target }
+Copy-Item -LiteralPath (Join-Path $launcherSourceRoot 'WMMT6-Launch.bat') -Destination $safeLauncherBat -Force
+Copy-Item -LiteralPath (Join-Path $launcherSourceRoot 'WMMT6-Launch.ps1') -Destination $safeLauncherScript -Force
+$safeLauncherSettings = [ordered]@{
     GameExecutable = $gameExe
     AuthExecutable = (Join-Path $amcus 'AMAuthd.exe')
+    MuchaExecutable = (Join-Path $amcus 'MuchaBin\muchacd.exe')
     ProfileFile = $baseProfile.Name
+    AdapterIp = $config.AdapterIp
+    ServerUri = "https://$($config.ServerIp):9002"
+    OpenParrotPath = $installedOpenParrotPath
+    OpenParrotSha256 = $installedOpenParrotHash
 }
-[IO.File]::WriteAllText($borderlessConfig, ($borderlessSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText($safeLauncherConfig, ($safeLauncherSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+
+# Retire the old external window/resolution helper. Backups make this reversible,
+# but leaving its BAT beside TeknoParrot risks launching the crashing path again.
+foreach ($obsoleteLauncher in 'WMMT6-Borderless.bat', 'WMMT6-Borderless.ps1', 'WMMT6-Borderless.json') {
+    $obsoletePath = Join-Path $tpRoot $obsoleteLauncher
+    if (Test-Path -LiteralPath $obsoletePath -PathType Leaf) {
+        Backup-File $obsoletePath
+        Remove-Item -LiteralPath $obsoletePath -Force
+    }
+}
 
 if ($maxiExe) {
     $maxiConfigPath = Join-Path (Split-Path $maxiExe -Parent) 'config.json'
@@ -642,7 +659,9 @@ Write-Host 'WMMT6 client configuration completed successfully.' -ForegroundColor
 Write-Host "Backups: $backupRoot"
 Write-Host "Server: https://$($config.ServerIp):9002"
 Write-Host "TeknoParrot profile (configured in place): $profilePath"
-Write-Host "Borderless launcher: $borderlessBat"
+Write-Host "Safe launcher (recommended): $safeLauncherBat"
+Write-Host 'White Screen Fix: enabled; Windowed mode: disabled'
+Write-Host 'External borderless/resolution helper: removed'
 Write-Host "Client identity: $identityPath"
 Write-Host "Cabinet number (AMAuth netID): $cabinetId"
 Write-Host "Matched AMAuth serial: $driveSerial"

@@ -28,7 +28,7 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 4. Select the correct `wmn6r.exe` and `TeknoParrotUi.exe` when prompted.
 5. Wait for `WMMT6 client configuration completed successfully`.
 6. Start Bayshore and the single server-side MaxiTerminal.
-7. Run `WMMT6-Borderless.bat` from the selected TeknoParrot root.
+7. Run `WMMT6-Launch.bat` from the selected TeknoParrot root.
 
 ## What is configured
 
@@ -40,15 +40,17 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - automatic matching of AMAuth `serialID` to the `280811...` auth identity embedded in OpenParrot;
 - `WritableConfig.ini` with a unique cabinet `netID` from 1 through 4;
 - a persistent, unique client/card identity;
-- the existing WMMT6 user profile, automatically corrected with the selected game path, single-executable launching, terminal emulation, card access, the active client adapter, the real router, and stable fullscreen mode;
+- the existing WMMT6 user profile, automatically corrected with the selected game path, single-executable launching, terminal emulation, card access, the active client adapter, the real router, `WhiteScreenFix=1`, and `Windowed=0`;
 - removal of obsolete `WMMT6-Bayshore.xml` copies that appeared as a second `Metadata Missing` game;
 - Windows hosts entries for ALL.Net;
 - the `225.0.0.1/32` multicast route on the active adapter;
 - scoped Windows Firewall rules;
 - `iauthdll.dll` registration;
-- `WMMT6-Borderless.bat` and its helper/config beside `TeknoParrotUi.exe`.
+- `WMMT6-Launch.bat` and its helper/config beside `TeknoParrotUi.exe`.
 
-The borderless BAT starts `AMAuthd.exe` directly so OpenParrot is never injected into it, then launches the existing WMMT6 profile through TeknoParrot. OpenParrot's unstable `Windowed` hook stays disabled; the helper repeatedly removes any frame the game recreates and centers a 16:9 surface on the current monitor. Closing the game closes the helper, the AMAuth instance it started, and the backdrop.
+The safe launcher starts `AMAuthd.exe` directly so OpenParrot is never injected into it, then launches the existing WMMT6 profile through TeknoParrot. The required OpenParrot White Screen Fix stays enabled to prevent flashing, while its unstable `Windowed` option stays disabled. The launcher does not change Windows resolution, restyle or resize the game window, create a backdrop, or inject an extra DLL. It validates the profile and server first, writes a launch log, and copies a recent WER report when the game exits unexpectedly.
+
+Setup backs up and removes the obsolete `WMMT6-Borderless.*` helper from the selected TeknoParrot root. Do not restore or run it together with the White Screen Fix.
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
 
@@ -61,7 +63,7 @@ MaxiTerminal is not installed on each client. Normally, one compatible MaxiTermi
 ## Supported version
 
 This package accepts only the known WMMT6 1.03.04 `wmn6r.exe` hash. It does not support WMMT6R or WMMT6RR.
-The configurator refuses the known crashing custom OpenParrot hashes from v1.1.7-v1.2.0. Restore OpenParrot with TeknoParrot's updater or a clean TeknoParrot backup before running v1.3.1.
+The configurator refuses the known crashing custom OpenParrot hashes from v1.1.7-v1.2.0. Restore OpenParrot with TeknoParrot's updater or a clean TeknoParrot backup before running the current package.
 The package never scans for or automatically selects a ROM when `GamePath` is `SELECT` (the default).
 
 The multicast route is created as an on-link route (`NextHop 0.0.0.0`). Setup

@@ -29,11 +29,11 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
 4. auto-detect the active client adapter and router;
 5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, unique card/cabinet identities, and the existing WMMT6 user profile;
-6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
+6. install `WMMT6-Launch.bat` plus its safe helper and generated launcher configuration directly in the selected TeknoParrot root.
 
 The public release does not redistribute the game or MaxiTerminal. It includes four verified Bayshore-specific assets and deliberately preserves TeknoParrot's installed `OpenParrot64.dll`. The configurator performs a complete read-only preflight before changing anything and never automatically selects a WMMT6 ROM.
 
-After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth outside OpenParrot injection and launches the existing WMMT6 profile in centered, monitor-aware 16:9 borderless mode. Setup removes obsolete `WMMT6-Bayshore.xml` copies, so TeknoParrot no longer shows a second `Metadata Missing` game.
+After configuration, run `WMMT6-Launch.bat` beside `TeknoParrotUi.exe`. It starts AMAuth outside OpenParrot injection and launches the existing WMMT6 profile without changing display resolution or manipulating the game window. Setup removes obsolete `WMMT6-Bayshore.xml` copies, so TeknoParrot no longer shows a second `Metadata Missing` game.
 
 For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next hop). It uses `New-NetRoute` with its default active-and-persistent behavior and falls back to persistent `netsh` or `route.exe` syntax when necessary.
 
@@ -51,7 +51,7 @@ Client setup v1.4.0 supports up to four simultaneous LAN cabinets by assigning a
 
 Client setup v1.4.1 corrects E0517 by using OpenParrot's `280811...` AMAuth identity for `WritableConfig.ini`, not its separate `280813...` drive-dongle identity.
 
-Client setup v1.3.1 configures the existing WMMT6 user profile directly, applies the selected game path, keeps `Windowed=0` to avoid the confirmed OpenParrot DXGI crash, applies the detected client adapter and real default gateway, removes obsolete duplicate profiles, and reinforces borderless styling while the game runs.
+Client setup v1.5.0 keeps the required `WhiteScreenFix=1`, keeps `Windowed=0`, and replaces the external borderless/resolution helper with a minimal launcher. It validates the profile and server, starts AMAuth directly, launches TeknoParrot, records diagnostics, and never changes display resolution or window styles.
 
 ## Server MaxiTerminal Setup
 
@@ -613,10 +613,10 @@ NetworkAdapterIP:     <LAN_IP>
 RouterIP:             <ROUTER_IP>
 TerminalEmulator:     1
 Windowed:             0
-WhiteScreenFix:       0
+WhiteScreenFix:       1
 ```
 
-The universal configurator backs up and edits the existing WMMT6 user profile. It does not generate a second GameProfile. The profile uses these values because the borderless launcher starts AMAuth directly, outside OpenParrot injection:
+The universal configurator backs up and edits the existing WMMT6 user profile. It does not generate a second GameProfile. The safe launcher starts AMAuth directly, outside OpenParrot injection:
 
 ```text
 HasTwoExecutables = false
@@ -625,7 +625,7 @@ LaunchSecondExecutableFirst = false
 
 Use `WMMT6.xml`. Never use `WMMT6R.xml` or `WMMT6RR.xml` for this client.
 
-Keep `Windowed=0`. The confirmed OpenParrot 1.0.0.784 windowed DXGI path can crash this supported game executable. `WMMT6-Borderless.bat` handles borderless fullscreen externally and keeps removing any title bar recreated during startup.
+Keep `WhiteScreenFix=1` to prevent the full-screen flashing seen on this cabinet, and keep `Windowed=0` because the OpenParrot windowed DXGI path can crash this supported game executable. Use `WMMT6-Launch.bat`; it deliberately performs no external resolution, borderless, resize, or window-style manipulation.
 
 `TerminalMode` must remain `0` on the drive cabinet. `TerminalMode 1` is used only when another full WMMT6 instance acts as a terminal on a separate computer.
 
