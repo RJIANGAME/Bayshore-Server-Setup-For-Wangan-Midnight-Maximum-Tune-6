@@ -11,6 +11,8 @@ This tool configures the WMMT6 1.03.04 terminal service required for cabinets to
 
 The watchdog checks the database, Bayshore `/readyz`, MaxiTerminal, and UDP 50765 every 30 seconds. Three failed checks restart the complete stack. It also refreshes the complete stack after 60 minutes without LAN client activity, preventing stale idle services from rejecting the next cabinet. Settings are stored in `server-terminal.json`; set `WatchdogEnabled` to `false` to disable it or change `IdleRestartMinutes` (minimum 5). Recovery history is written to `watchdog.log`.
 
+Daily start does not request administrator elevation. Run `Configure-Server-Terminal.bat` as administrator once to create the firewall rule; the start BAT then keeps any startup error visible in its own window and is safe to run when the database is either running or already stopped.
+
 The ZIP does not contain MaxiTerminal because no redistribution license is available. The approved WMMT6 executable SHA-256 is `DF792DE6500F1A9836439535846B12E2391024E98097DE4E7145F29027F262AF`.
 
 Run only one MaxiTerminal instance per LAN venue. This package is for Japanese WMMT6 revision 1.03.04, not WMMT6R or WMMT6RR.

@@ -31,12 +31,10 @@ $sourceStop = Join-Path $applicationRoot 'scripts\Stop.ps1'
 if (Test-Path -LiteralPath $portableStop -PathType Leaf) {
     & $portableStop
 } elseif (Test-Path -LiteralPath $sourceStop -PathType Leaf) {
-    $stopCommand = Get-Command -Name $sourceStop
-    if ($stopCommand.Parameters.ContainsKey('IncludeDatabase')) {
-        & $sourceStop -IncludeDatabase
-    } else {
-        & $sourceStop
-    }
+    # Stop the application first. PostgreSQL is handled idempotently below;
+    # older source stop scripts fail when -IncludeDatabase is used while the
+    # database is already stopped.
+    & $sourceStop
 } else {
     Write-Warning "No supported Bayshore stop script was found under $applicationRoot; MaxiTerminal was stopped."
 }
