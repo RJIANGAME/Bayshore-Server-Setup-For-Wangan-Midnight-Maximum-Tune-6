@@ -24,7 +24,7 @@ $applicationRoot = [IO.Path]::GetFullPath([string]$config.ApplicationRoot)
 $terminalExe = [IO.Path]::GetFullPath([string]$config.MaxiTerminalPath)
 $servicePort = [int]$config.ServicePort
 $idleMinutes = if ($null -ne $config.IdleRestartMinutes) { [Math]::Max(5, [int]$config.IdleRestartMinutes) } else { 60 }
-$checkSeconds = if ($null -ne $config.HealthCheckSeconds) { [Math]::Max(10, [int]$config.HealthCheckSeconds) } else { 30 }
+$checkSeconds = if ($null -ne $config.HealthCheckSeconds) { [Math]::Max(10, [int]$config.HealthCheckSeconds) } else { 10 }
 $failureThreshold = if ($null -ne $config.HealthFailureThreshold) { [Math]::Max(2, [int]$config.HealthFailureThreshold) } else { 3 }
 $enabled = if ($null -ne $config.WatchdogEnabled) { [bool]$config.WatchdogEnabled } else { $true }
 

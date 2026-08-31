@@ -64,7 +64,7 @@ WMMT6 cabinets cannot pass the terminal link checks with Bayshore alone. Install
 
 The installer verifies the approved WMMT6 binary, copies it into `bin\MaxiTerminal`, generates its configuration from Bayshore's `serverIp` and `SERVICE_PORT`, and opens inbound UDP 50765. The public ZIP cannot include MaxiTerminal itself because no redistribution license is available.
 
-The watchdog checks the complete stack every 30 seconds and restarts it after three consecutive health failures. It also restarts after 60 minutes without LAN client activity so a stale idle terminal/database session cannot block the next cabinet. `Stop-Bayshore-And-Terminal.bat` stops PostgreSQL as well as Bayshore, MaxiTerminal, and the watchdog. See [`server-terminal-setup/README.md`](server-terminal-setup/README.md) for settings and logs.
+The watchdog checks the complete stack every 10 seconds and restarts it after three consecutive health failures. It also restarts after 60 minutes without LAN client activity so a stale idle terminal/database session cannot block the next cabinet. `Stop-Bayshore-And-Terminal.bat` stops PostgreSQL as well as Bayshore, MaxiTerminal, and the watchdog. See [`server-terminal-setup/README.md`](server-terminal-setup/README.md) for settings and logs.
 
 ## Player Data Backup, Restore, and Merge
 
