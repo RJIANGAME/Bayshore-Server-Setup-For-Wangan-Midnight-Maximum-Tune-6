@@ -28,12 +28,12 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 2. validate the address;
 3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
 4. auto-detect the active client adapter and router;
-5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity without modifying the existing TeknoParrot profile.
+5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, a unique card/client identity, and the existing WMMT6 user profile;
 6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
 The public release does not redistribute the game or MaxiTerminal. It includes four verified Bayshore-specific assets and deliberately preserves TeknoParrot's installed `OpenParrot64.dll`. The configurator performs a complete read-only preflight before changing anything and never automatically selects a WMMT6 ROM.
 
-After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth outside OpenParrot injection and launches WMMT6 through a generated single-executable profile in centered, monitor-aware 16:9 borderless mode.
+After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth outside OpenParrot injection and launches the existing WMMT6 profile in centered, monitor-aware 16:9 borderless mode. Setup removes obsolete `WMMT6-Bayshore.xml` copies, so TeknoParrot no longer shows a second `Metadata Missing` game.
 
 For multicast, setup creates `225.0.0.1/32` as an on-link route (`0.0.0.0` next hop). It uses `New-NetRoute` with its default active-and-persistent behavior and falls back to persistent `netsh` or `route.exe` syntax when necessary.
 
@@ -46,6 +46,19 @@ Client setup v1.1.9 leaves both WMMT6 executables under TeknoParrot's control. T
 Client setup v1.2.0 supersedes v1.1.9 after crash evidence showed that TeknoParrot injected `OpenParrot64.dll` into `AMAuthd.exe`. It generates `WMMT6-Bayshore.xml` profile copies with the second executable disabled, starts AMAuth directly, and uses OpenParrot only for `wmn6r.exe`. Existing profiles remain unchanged.
 
 Client setup v1.3.0 removes the custom OpenParrot DLL after repeated `0xc0000005` crashes inside its native WMMT6/D3D hooks. Setup now preserves the TeknoParrot-supplied DLL and rejects the known crashing hashes from earlier releases.
+
+Client setup v1.3.1 configures the existing WMMT6 user profile directly, applies the selected game path, keeps `Windowed=0` to avoid the confirmed OpenParrot DXGI crash, applies the detected client adapter and real default gateway, removes obsolete duplicate profiles, and reinforces borderless styling while the game runs.
+
+## Server MaxiTerminal Setup
+
+WMMT6 cabinets cannot pass the terminal link checks with Bayshore alone. Install one venue MaxiTerminal on the server PC using [`server-terminal-setup`](server-terminal-setup):
+
+1. Run `Configure-Server-Terminal.bat` as administrator.
+2. Select the configured Bayshore root.
+3. Select your legally obtained `MaxiTerminal.exe`.
+4. Use `Start-Bayshore-And-Terminal.bat` for daily startup.
+
+The installer verifies the approved WMMT6 binary, copies it into `bin\MaxiTerminal`, generates its configuration from Bayshore's `serverIp` and `SERVICE_PORT`, and opens inbound UDP 50765. The public ZIP cannot include MaxiTerminal itself because no redistribution license is available.
 
 ## Player Data Backup, Restore, and Merge
 
@@ -585,11 +598,12 @@ TerminalMode:         0
 Banapass Connection:  1
 NetworkAdapterIP:     <LAN_IP>
 RouterIP:             <ROUTER_IP>
-Windowed:             1 while troubleshooting
-WhiteScreenFix:       enable only if required
+TerminalEmulator:     1
+Windowed:             0
+WhiteScreenFix:       0
 ```
 
-The universal configurator preserves the normal WMMT6 profile and generates a separate `WMMT6-Bayshore.xml` copy. The generated profile uses these values because the borderless launcher starts AMAuth directly, outside OpenParrot injection:
+The universal configurator backs up and edits the existing WMMT6 user profile. It does not generate a second GameProfile. The profile uses these values because the borderless launcher starts AMAuth directly, outside OpenParrot injection:
 
 ```text
 HasTwoExecutables = false
@@ -597,6 +611,8 @@ LaunchSecondExecutableFirst = false
 ```
 
 Use `WMMT6.xml`. Never use `WMMT6R.xml` or `WMMT6RR.xml` for this client.
+
+Keep `Windowed=0`. The confirmed OpenParrot 1.0.0.784 windowed DXGI path can crash this supported game executable. `WMMT6-Borderless.bat` handles borderless fullscreen externally and keeps removing any title bar recreated during startup.
 
 `TerminalMode` must remain `0` on the drive cabinet. `TerminalMode 1` is used only when another full WMMT6 instance acts as a terminal on a separate computer.
 

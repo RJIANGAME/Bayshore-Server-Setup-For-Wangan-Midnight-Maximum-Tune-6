@@ -142,10 +142,21 @@ $originalStyle = [WmmtBorderlessNative]::GetWindowLongPtr($window, -16)
 $originalExStyle = [WmmtBorderlessNative]::GetWindowLongPtr($window, -20)
 $originalRect = New-Object WmmtBorderlessNative+RECT
 [void][WmmtBorderlessNative]::GetWindowRect($window, [ref]$originalRect)
-$removeStyle = [long](0x00C00000L -bor 0x00040000L -bor 0x20000000L -bor 0x01000000L -bor 0x00080000L)
+$removeStyle = [long](0x00C00000L -bor 0x00040000L -bor 0x20000000L -bor 0x01000000L -bor 0x00080000L -bor 0x00020000L -bor 0x00010000L)
 $removeExStyle = [long](0x00000001L -bor 0x00000200L -bor 0x00020000L)
-$borderlessStyle = $originalStyle.ToInt64() -band (-bnot $removeStyle)
-$borderlessExStyle = $originalExStyle.ToInt64() -band (-bnot $removeExStyle)
+function Set-WmmtBorderlessWindow([IntPtr]$Handle) {
+    if ($Handle -eq [IntPtr]::Zero) { return }
+    $liveStyle = [WmmtBorderlessNative]::GetWindowLongPtr($Handle, -16).ToInt64()
+    $liveExStyle = [WmmtBorderlessNative]::GetWindowLongPtr($Handle, -20).ToInt64()
+    $newStyle = $liveStyle -band (-bnot $removeStyle)
+    $newExStyle = $liveExStyle -band (-bnot $removeExStyle)
+    if ($newStyle -ne $liveStyle) {
+        [void][WmmtBorderlessNative]::SetWindowLongPtr($Handle, -16, [IntPtr]$newStyle)
+    }
+    if ($newExStyle -ne $liveExStyle) {
+        [void][WmmtBorderlessNative]::SetWindowLongPtr($Handle, -20, [IntPtr]$newExStyle)
+    }
+}
 
 $backdrop = New-Object System.Windows.Forms.Form
 $backdrop.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
@@ -157,17 +168,17 @@ $backdrop.Bounds = New-Object Drawing.Rectangle($bounds.Left, $bounds.Top, $moni
 
 try {
     $backdrop.Show()
-    [void][WmmtBorderlessNative]::SetWindowLongPtr($window, -16, [IntPtr]$borderlessStyle)
-    [void][WmmtBorderlessNative]::SetWindowLongPtr($window, -20, [IntPtr]$borderlessExStyle)
+    Set-WmmtBorderlessWindow $window
     Write-Host "WMMT6 borderless mode active at ${targetWidth}x${targetHeight}. Close the game to exit."
     while (-not $game.HasExited) {
         $game.Refresh()
         if ($game.MainWindowHandle -ne [IntPtr]::Zero) { $window = $game.MainWindowHandle }
+        Set-WmmtBorderlessWindow $window
         [void][WmmtBorderlessNative]::SetWindowPos(
             $window, [IntPtr](-1), $targetLeft, $targetTop, $targetWidth, $targetHeight, [uint32]0x0060
         )
         [System.Windows.Forms.Application]::DoEvents()
-        Start-Sleep -Milliseconds 1000
+        Start-Sleep -Milliseconds 250
     }
 }
 finally {
