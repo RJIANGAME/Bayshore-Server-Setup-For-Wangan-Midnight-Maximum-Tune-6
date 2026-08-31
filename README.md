@@ -49,6 +49,8 @@ Client setup v1.3.0 removes the custom OpenParrot DLL after repeated `0xc0000005
 
 Client setup v1.4.0 supports up to four simultaneous LAN cabinets by assigning a unique AMAuth `netID` to each client. It also detects the WMMT6 drive serial embedded in OpenParrot and writes the exact matching `serialID`, preventing startup from stopping between ALL.Net and MUCHA.
 
+Client setup v1.4.1 corrects E0517 by using OpenParrot's `280811...` AMAuth identity for `WritableConfig.ini`, not its separate `280813...` drive-dongle identity.
+
 Client setup v1.3.1 configures the existing WMMT6 user profile directly, applies the selected game path, keeps `Windowed=0` to avoid the confirmed OpenParrot DXGI crash, applies the detected client adapter and real default gateway, removes obsolete duplicate profiles, and reinforces borderless styling while the game runs.
 
 ## Server MaxiTerminal Setup
@@ -516,10 +518,10 @@ dtcfg-dl_image_path=<AMCUS_DIR>\dl_image
 [RuntimeConfig]
 mode=
 netID=1
-serialID=280813990002
+serialID=280811990002
 ```
 
-`netID` is the drive cabinet number, not the card ID. Use a different value from `1` through `4` on every simultaneously active cabinet. For example, the second computer must use `netID=2`; duplicate `netID=1` clients conflict even when their card IDs and `serialID` values differ. `serialID` must exactly match the normal-drive dongle serial embedded in OpenParrot (`280813990002` in the identified source). Do not use its separate terminal-mode `280811...` serial. If a custom OpenParrot build changes the drive serial, AMAuth must use the same full 12 digits. Do not casually rewrite serial bytes inside captured packets; integrity fields may depend on the content.
+`netID` is the drive cabinet number, not the card ID. Use a different value from `1` through `4` on every simultaneously active cabinet. For example, the second computer must use `netID=2`; duplicate `netID=1` clients conflict even when their card IDs and `serialID` values differ. `serialID` must use the AMAuth identity embedded in OpenParrot (`280811990002` in the identified source). Do not use its separate `280813...` drive-dongle identity in `WritableConfig.ini`. If a custom OpenParrot build changes the AMAuth identity, the configuration must use the same full 12 digits. Do not casually rewrite serial bytes inside captured packets; integrity fields may depend on the content.
 
 > [!CAUTION]
 > Do not save AMConfig.ini as UTF-8. Do not start AMAuthd twice.

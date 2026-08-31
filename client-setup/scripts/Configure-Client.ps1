@@ -182,22 +182,21 @@ if ($installedOpenParrotHash -in $knownCrashingOpenParrotHashes) {
 }
 Write-Host "Preserving TeknoParrot-supplied OpenParrot64.dll: $installedOpenParrotPath (SHA-256 $installedOpenParrotHash)"
 
-# AMAuth's serialID must exactly match the drive serial exposed by OpenParrot's
-# emulated WMMT6 dongle. The terminal-mode serial uses a different 280811...
-# prefix and must not be written into the drive cabinet's WritableConfig.ini.
+# AMAuth's serialID uses the 280811... identity exposed by OpenParrot's WMMT6
+# terminal/auth path. Do not use the separate 280813... drive-dongle identity.
 $openParrotAscii = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($installedOpenParrotPath))
-$embeddedDriveSerials = @([regex]::Matches($openParrotAscii, '2808139900\d{2}') | ForEach-Object Value | Sort-Object -Unique)
-if ($embeddedDriveSerials.Count -ne 1) {
-    throw "Could not identify exactly one WMMT6 drive serial in OpenParrot64.dll. Found: $($embeddedDriveSerials -join ', '). Restore or rebuild a compatible Project Asakura OpenParrot DLL."
+$embeddedAuthSerials = @([regex]::Matches($openParrotAscii, '2808119900\d{2}') | ForEach-Object Value | Sort-Object -Unique)
+if ($embeddedAuthSerials.Count -ne 1) {
+    throw "Could not identify exactly one WMMT6 AMAuth serial in OpenParrot64.dll. Found: $($embeddedAuthSerials -join ', '). Restore or rebuild a compatible Project Asakura OpenParrot DLL."
 }
-$embeddedDriveSerial = [string]$embeddedDriveSerials[0]
+$embeddedAuthSerial = [string]$embeddedAuthSerials[0]
 $configuredDriveSerial = if ($config.PSObject.Properties.Name -contains 'DriveSerial') { [string]$config.DriveSerial } else { 'AUTO' }
-$driveSerial = if ([string]::IsNullOrWhiteSpace($configuredDriveSerial) -or $configuredDriveSerial -eq 'AUTO') { $embeddedDriveSerial } else { $configuredDriveSerial }
+$driveSerial = if ([string]::IsNullOrWhiteSpace($configuredDriveSerial) -or $configuredDriveSerial -eq 'AUTO') { $embeddedAuthSerial } else { $configuredDriveSerial }
 if ($driveSerial -notmatch '^\d{12}$') { throw 'DriveSerial must be AUTO or exactly 12 decimal digits.' }
-if ($driveSerial -ne $embeddedDriveSerial) {
-    throw "DriveSerial $driveSerial does not match OpenParrot's embedded drive serial $embeddedDriveSerial. Use AUTO or make both values identical."
+if ($driveSerial -ne $embeddedAuthSerial) {
+    throw "DriveSerial $driveSerial does not match OpenParrot's embedded AMAuth serial $embeddedAuthSerial. Use AUTO or make both values identical."
 }
-Write-Host "Matched OpenParrot/AMAuth drive serial: $driveSerial"
+Write-Host "Matched OpenParrot/AMAuth serial: $driveSerial"
 
 $requiredClientAssets = @(
     @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'; Candidates = @((Join-Path $gameRoot 'bngrw.dll')) },
@@ -646,5 +645,5 @@ Write-Host "TeknoParrot profile (configured in place): $profilePath"
 Write-Host "Borderless launcher: $borderlessBat"
 Write-Host "Client identity: $identityPath"
 Write-Host "Cabinet number (AMAuth netID): $cabinetId"
-Write-Host "Matched drive serial: $driveSerial"
+Write-Host "Matched AMAuth serial: $driveSerial"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: server-side venue service; nothing is installed on this client' }

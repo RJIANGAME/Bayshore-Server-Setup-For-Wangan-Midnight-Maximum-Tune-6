@@ -37,7 +37,7 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - WMMT6 network certificates;
 - Shift-JIS-safe `AMConfig.ini` changes for MUCHA;
 - `WritableConfig.ini` with a unique drive serial;
-- automatic matching of AMAuth `serialID` to the drive serial embedded in OpenParrot;
+- automatic matching of AMAuth `serialID` to the `280811...` auth identity embedded in OpenParrot;
 - `WritableConfig.ini` with a unique cabinet `netID` from 1 through 4;
 - a persistent, unique client/card identity;
 - the existing WMMT6 user profile, automatically corrected with the selected game path, single-executable launching, terminal emulation, card access, the active client adapter, the real router, and stable fullscreen mode;
@@ -54,7 +54,7 @@ Existing files are backed up under `client-setup\backups` before replacement. Do
 
 For simultaneous play, every computer must use a different cabinet number: cabinet 1 uses `netID=1`, cabinet 2 uses `netID=2`, and so on. A different card ID or drive serial does not replace this requirement. If two clients were configured with an older package, update the package and rerun `Configure-Client.bat` on each computer, selecting a different cabinet number. Only one MaxiTerminal instance should run for the venue.
 
-The supported OpenParrot source exposes the normal drive cabinet serial as `280813990002`; terminal mode uses a separate `280811...` identity. If OpenParrot is rebuilt or carefully patched with a different 12-digit drive serial, setup detects that embedded `280813...` value and writes the identical value to `AMCUS\WritableConfig.ini`. A mismatch stops startup after ALL.Net and before MUCHA. Leave `DriveSerial` as `AUTO` unless diagnosing a custom build; an explicit value is rejected when it differs from the DLL.
+The supported OpenParrot source contains an AMAuth/terminal identity of `280811990002` and a separate drive-dongle identity beginning with `280813`. `AMCUS\WritableConfig.ini` requires the `280811...` identity. Setup detects that embedded value and writes it automatically. Using `280813...` causes startup error E0517 after ALL.Net and before MUCHA. Leave `DriveSerial` as `AUTO` unless diagnosing a custom build; an explicit value is rejected when it differs from the DLL.
 
 MaxiTerminal is not installed on each client. Normally, one compatible MaxiTerminal instance runs on the server or another designated computer on the same LAN.
 
