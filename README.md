@@ -514,10 +514,10 @@ dtcfg-dl_image_path=<AMCUS_DIR>\dl_image
 [RuntimeConfig]
 mode=
 netID=1
-serialID=280811990001
+serialID=280813990002
 ```
 
-`netID` is the drive cabinet number, not the card ID. Use a different value from `1` through `4` on every simultaneously active cabinet. For example, the second computer must use `netID=2`; duplicate `netID=1` clients conflict even when their card IDs and `serialID` values differ. The exact valid serial convention can depend on the client build. Keep drive and terminal identities distinct. Do not casually rewrite serial bytes inside captured terminal packets; packet integrity fields may depend on the content.
+`netID` is the drive cabinet number, not the card ID. Use a different value from `1` through `4` on every simultaneously active cabinet. For example, the second computer must use `netID=2`; duplicate `netID=1` clients conflict even when their card IDs and `serialID` values differ. `serialID` must exactly match the normal-drive dongle serial embedded in OpenParrot (`280813990002` in the identified source). Do not use its separate terminal-mode `280811...` serial. If a custom OpenParrot build changes the drive serial, AMAuth must use the same full 12 digits. Do not casually rewrite serial bytes inside captured packets; integrity fields may depend on the content.
 
 > [!CAUTION]
 > Do not save AMConfig.ini as UTF-8. Do not start AMAuthd twice.

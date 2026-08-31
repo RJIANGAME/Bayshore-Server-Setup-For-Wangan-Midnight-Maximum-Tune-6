@@ -182,6 +182,23 @@ if ($installedOpenParrotHash -in $knownCrashingOpenParrotHashes) {
 }
 Write-Host "Preserving TeknoParrot-supplied OpenParrot64.dll: $installedOpenParrotPath (SHA-256 $installedOpenParrotHash)"
 
+# AMAuth's serialID must exactly match the drive serial exposed by OpenParrot's
+# emulated WMMT6 dongle. The terminal-mode serial uses a different 280811...
+# prefix and must not be written into the drive cabinet's WritableConfig.ini.
+$openParrotAscii = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($installedOpenParrotPath))
+$embeddedDriveSerials = @([regex]::Matches($openParrotAscii, '2808139900\d{2}') | ForEach-Object Value | Sort-Object -Unique)
+if ($embeddedDriveSerials.Count -ne 1) {
+    throw "Could not identify exactly one WMMT6 drive serial in OpenParrot64.dll. Found: $($embeddedDriveSerials -join ', '). Restore or rebuild a compatible Project Asakura OpenParrot DLL."
+}
+$embeddedDriveSerial = [string]$embeddedDriveSerials[0]
+$configuredDriveSerial = if ($config.PSObject.Properties.Name -contains 'DriveSerial') { [string]$config.DriveSerial } else { 'AUTO' }
+$driveSerial = if ([string]::IsNullOrWhiteSpace($configuredDriveSerial) -or $configuredDriveSerial -eq 'AUTO') { $embeddedDriveSerial } else { $configuredDriveSerial }
+if ($driveSerial -notmatch '^\d{12}$') { throw 'DriveSerial must be AUTO or exactly 12 decimal digits.' }
+if ($driveSerial -ne $embeddedDriveSerial) {
+    throw "DriveSerial $driveSerial does not match OpenParrot's embedded drive serial $embeddedDriveSerial. Use AUTO or make both values identical."
+}
+Write-Host "Matched OpenParrot/AMAuth drive serial: $driveSerial"
+
 $requiredClientAssets = @(
     @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'; Candidates = @((Join-Path $gameRoot 'bngrw.dll')) },
     @{ Name = 'setting.lua.gz'; Hash = '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'; Candidates = @((Join-Path $gameRoot 'TP\setting.lua.gz')) },
@@ -420,8 +437,6 @@ if (Test-Path -LiteralPath $identityPath -PathType Leaf) {
         $accessCode = New-RandomDigits 20
         $cardId = New-RandomHex 16
     }
-    $configuredSerial = if ($config.PSObject.Properties.Name -contains 'DriveSerial') { [string]$config.DriveSerial } else { 'AUTO' }
-    $driveSerial = if ($configuredSerial -eq 'AUTO') { New-RandomDigits 12 } else { $configuredSerial }
     $identity = [pscustomobject][ordered]@{
         AccessCode = $accessCode
         CardId = $cardId
@@ -434,7 +449,11 @@ if (Test-Path -LiteralPath $identityPath -PathType Leaf) {
 
 if ([string]$identity.AccessCode -notmatch '^\d{20}$') { throw "Invalid AccessCode in $identityPath" }
 if ([string]$identity.CardId -notmatch '^[0-9A-Fa-f]{32}$') { throw "Invalid CardId in $identityPath" }
-if ([string]$identity.DriveSerial -notmatch '^\d{12}$') { throw "Invalid DriveSerial in $identityPath" }
+if ($identity.PSObject.Properties.Name -contains 'DriveSerial') {
+    $identity.DriveSerial = $driveSerial
+} else {
+    $identity | Add-Member -NotePropertyName DriveSerial -NotePropertyValue $driveSerial
+}
 if ($identity.PSObject.Properties.Name -contains 'CabinetId') {
     $identity.CabinetId = $cabinetId
 } else {
@@ -627,4 +646,5 @@ Write-Host "TeknoParrot profile (configured in place): $profilePath"
 Write-Host "Borderless launcher: $borderlessBat"
 Write-Host "Client identity: $identityPath"
 Write-Host "Cabinet number (AMAuth netID): $cabinetId"
+Write-Host "Matched drive serial: $driveSerial"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: server-side venue service; nothing is installed on this client' }
