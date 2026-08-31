@@ -25,10 +25,10 @@ The repository now includes a [client-only configurator](client-setup) for a new
 Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 
 1. ask the user to type the Bayshore server IPv4 address;
-2. validate the address;
+2. validate the address and ask for a unique drive cabinet number from 1 through 4;
 3. ask the user to select `wmn6r.exe` and `TeknoParrotUi.exe` instead of locating them automatically;
 4. auto-detect the active client adapter and router;
-5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, a unique card/client identity, and the existing WMMT6 user profile;
+5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, unique card/cabinet identities, and the existing WMMT6 user profile;
 6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
 The public release does not redistribute the game or MaxiTerminal. It includes four verified Bayshore-specific assets and deliberately preserves TeknoParrot's installed `OpenParrot64.dll`. The configurator performs a complete read-only preflight before changing anything and never automatically selects a WMMT6 ROM.
@@ -517,7 +517,7 @@ netID=1
 serialID=280811990001
 ```
 
-The exact valid serial convention can depend on the client build. Keep drive and terminal identities distinct. Do not casually rewrite serial bytes inside captured terminal packets; packet integrity fields may depend on the content.
+`netID` is the drive cabinet number, not the card ID. Use a different value from `1` through `4` on every simultaneously active cabinet. For example, the second computer must use `netID=2`; duplicate `netID=1` clients conflict even when their card IDs and `serialID` values differ. The exact valid serial convention can depend on the client build. Keep drive and terminal identities distinct. Do not casually rewrite serial bytes inside captured terminal packets; packet integrity fields may depend on the content.
 
 > [!CAUTION]
 > Do not save AMConfig.ini as UTF-8. Do not start AMAuthd twice.

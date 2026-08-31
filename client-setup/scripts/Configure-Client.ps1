@@ -59,6 +59,22 @@ $config.ServerIp = $serverIp
 $config.AdapterIp = $adapterIp
 $config.RouterIp = $routerIp
 
+$configuredCabinetId = if ($config.PSObject.Properties.Name -contains 'CabinetId') { [string]$config.CabinetId } else { 'PROMPT' }
+if ($configuredCabinetId -notmatch '^[1-4]$') {
+    do {
+        $configuredCabinetId = (Read-Host 'Enter this drive cabinet number (1-4; every active cabinet must be different)').Trim()
+        if ($configuredCabinetId -notmatch '^[1-4]$') {
+            Write-Warning 'Cabinet number must be 1, 2, 3, or 4.'
+        }
+    } while ($configuredCabinetId -notmatch '^[1-4]$')
+}
+$cabinetId = [int]$configuredCabinetId
+if ($config.PSObject.Properties.Name -contains 'CabinetId') {
+    $config.CabinetId = $cabinetId
+} else {
+    $config | Add-Member -NotePropertyName CabinetId -NotePropertyValue $cabinetId
+}
+
 function Resolve-ExecutablePath(
     [string]$ConfiguredPath,
     [string]$Label,
@@ -410,6 +426,7 @@ if (Test-Path -LiteralPath $identityPath -PathType Leaf) {
         AccessCode = $accessCode
         CardId = $cardId
         DriveSerial = $driveSerial
+        CabinetId = $cabinetId
         ProfileFile = $baseProfile.Name
     }
     [IO.File]::WriteAllText($identityPath, ($identity | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
@@ -418,13 +435,18 @@ if (Test-Path -LiteralPath $identityPath -PathType Leaf) {
 if ([string]$identity.AccessCode -notmatch '^\d{20}$') { throw "Invalid AccessCode in $identityPath" }
 if ([string]$identity.CardId -notmatch '^[0-9A-Fa-f]{32}$') { throw "Invalid CardId in $identityPath" }
 if ([string]$identity.DriveSerial -notmatch '^\d{12}$') { throw "Invalid DriveSerial in $identityPath" }
+if ($identity.PSObject.Properties.Name -contains 'CabinetId') {
+    $identity.CabinetId = $cabinetId
+} else {
+    $identity | Add-Member -NotePropertyName CabinetId -NotePropertyValue $cabinetId
+}
 
 Backup-File $cardPath
 [IO.File]::WriteAllText($cardPath, "[card]`r`naccessCode=$($identity.AccessCode)`r`nchipId=$($identity.CardId.ToUpperInvariant())`r`n", [Text.UTF8Encoding]::new($false))
 
 $writablePath = Join-Path $amcus 'WritableConfig.ini'
 Backup-File $writablePath
-[IO.File]::WriteAllText($writablePath, "[RuntimeConfig]`r`nmode=`r`nnetID=1`r`nserialID=$($identity.DriveSerial)`r`n", [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText($writablePath, "[RuntimeConfig]`r`nmode=`r`nnetID=$cabinetId`r`nserialID=$($identity.DriveSerial)`r`n", [Text.UTF8Encoding]::new($false))
 
 # Configure only the existing WMMT6 user profile. A renamed GameProfile copy
 # appears as a second "Metadata Missing" game in TeknoParrot, so v1.3.1 no
@@ -604,4 +626,5 @@ Write-Host "Server: https://$($config.ServerIp):9002"
 Write-Host "TeknoParrot profile (configured in place): $profilePath"
 Write-Host "Borderless launcher: $borderlessBat"
 Write-Host "Client identity: $identityPath"
+Write-Host "Cabinet number (AMAuth netID): $cabinetId"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: server-side venue service; nothing is installed on this client' }

@@ -5,8 +5,9 @@ This folder configures a legally obtained Japanese WMMT6 1.03.04 client to use a
 ## What setup asks for
 
 1. The Bayshore server IPv4 address, such as `192.168.0.25`.
-2. The client's WMMT6 `wmn6r.exe`.
-3. The client's `TeknoParrotUi.exe`.
+2. A unique drive cabinet number from 1 through 4.
+3. The client's WMMT6 `wmn6r.exe`.
+4. The client's `TeknoParrotUi.exe`.
 
 The server address is validated before setup continues. The active client IPv4 address and default gateway are detected automatically unless explicit values are placed in `client-config.json`.
 
@@ -36,6 +37,7 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - WMMT6 network certificates;
 - Shift-JIS-safe `AMConfig.ini` changes for MUCHA;
 - `WritableConfig.ini` with a unique drive serial;
+- `WritableConfig.ini` with a unique cabinet `netID` from 1 through 4;
 - a persistent, unique client/card identity;
 - the existing WMMT6 user profile, automatically corrected with the selected game path, single-executable launching, terminal emulation, card access, the active client adapter, the real router, and stable fullscreen mode;
 - removal of obsolete `WMMT6-Bayshore.xml` copies that appeared as a second `Metadata Missing` game;
@@ -48,6 +50,8 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 The borderless BAT starts `AMAuthd.exe` directly so OpenParrot is never injected into it, then launches the existing WMMT6 profile through TeknoParrot. OpenParrot's unstable `Windowed` hook stays disabled; the helper repeatedly removes any frame the game recreates and centers a 16:9 surface on the current monitor. Closing the game closes the helper, the AMAuth instance it started, and the backdrop.
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
+
+For simultaneous play, every computer must use a different cabinet number: cabinet 1 uses `netID=1`, cabinet 2 uses `netID=2`, and so on. A different card ID or drive serial does not replace this requirement. If two clients were configured with an older package, update the package and rerun `Configure-Client.bat` on each computer, selecting a different cabinet number. Only one MaxiTerminal instance should run for the venue.
 
 MaxiTerminal is not installed on each client. Normally, one compatible MaxiTerminal instance runs on the server or another designated computer on the same LAN.
 

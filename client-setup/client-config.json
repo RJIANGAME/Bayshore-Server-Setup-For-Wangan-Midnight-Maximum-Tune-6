@@ -6,6 +6,7 @@
   "TeknoParrotPath": "SELECT",
   "MaxiTerminalPath": "DISABLED",
   "ProfileName": "AUTO",
+  "CabinetId": "PROMPT",
   "DriveSerial": "AUTO",
   "CustomName": "AUTO"
 }
