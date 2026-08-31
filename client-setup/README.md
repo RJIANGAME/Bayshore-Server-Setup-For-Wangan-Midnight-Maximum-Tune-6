@@ -12,7 +12,7 @@ The server address is validated before setup continues. The active client IPv4 a
 
 ## Required assets
 
-The release ZIP includes all five verified client assets: the Bayshore-compatible open-source `OpenParrot64.dll` and `bngrw.dll`, `setting.lua.gz`, and the required certificate/key pair. The DLL licenses and corresponding-source information are in [`third-party`](third-party). Setup checks the entire client, every asset, AMCUS configuration, the presence of an existing TeknoParrot WMMT6 user profile, client identity, and network adapter before modifying anything. It does not require optional profile fields such as `NetworkAdapterIP` or edit any file under `UserProfiles`. After preflight passes, incompatible standard files are backed up and replaced automatically.
+The release ZIP includes four verified Bayshore-specific assets: `bngrw.dll`, `setting.lua.gz`, and the certificate/key pair. It does not distribute or overwrite `OpenParrot64.dll`; setup preserves the version supplied by the selected TeknoParrot installation. Setup checks the entire client, every asset, AMCUS configuration, the existing WMMT6 profile, client identity, and network adapter before modifying anything.
 
 Every SHA-256 listed in [assets/README.md](assets/README.md) is verified before changing the client. No runtime file, certificate, or key needs to be selected separately when using the release ZIP.
 
@@ -32,7 +32,8 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 
 ## What is configured
 
-- verified OpenParrot and OpenBanapass client files;
+- the existing TeknoParrot-supplied OpenParrot runtime, preserved unchanged;
+- the verified OpenBanapass client file;
 - WMMT6 network certificates;
 - Shift-JIS-safe `AMConfig.ini` changes for MUCHA;
 - `WritableConfig.ini` with a unique drive serial;
@@ -53,7 +54,7 @@ MaxiTerminal is not installed on each client. Normally, one compatible MaxiTermi
 ## Supported version
 
 This package accepts only the known WMMT6 1.03.04 `wmn6r.exe` hash. It does not support WMMT6R or WMMT6RR.
-The included OpenParrot build explicitly recognizes that executable as CRC `7E804704`; release builds no longer open the extra Maxitune debug console.
+The configurator refuses the known crashing custom OpenParrot hashes from v1.1.7-v1.2.0. Restore OpenParrot with TeknoParrot's updater or a clean TeknoParrot backup before running v1.3.0.
 The package never scans for or automatically selects a ROM when `GamePath` is `SELECT` (the default).
 
 The multicast route is created as an on-link route (`NextHop 0.0.0.0`). Setup

@@ -31,7 +31,7 @@ Run `client-setup\Configure-Client.bat` as administrator. Setup will:
 5. back up and configure AMAuth launching, hosts, certificates, OpenParrot/OpenBanapass, multicast routing, firewall rules, and a unique card/client identity without modifying the existing TeknoParrot profile.
 6. install `WMMT6-Borderless.bat` plus its helper and generated launcher configuration directly in the selected TeknoParrot root.
 
-The public release does not redistribute the game or MaxiTerminal. It includes all five verified client runtime/configuration assets, including the client terminal certificate/key pair, plus license and corresponding-source information for the open-source DLLs. The configurator performs a complete read-only preflight of every asset, WMMT6/AMCUS requirement, existing TeknoParrot WMMT6 profile, client identity, and network adapter before changing anything. Optional profile fields are not required, and `UserProfiles` XML is never modified. It does not scan for or automatically select a WMMT6 ROM.
+The public release does not redistribute the game or MaxiTerminal. It includes four verified Bayshore-specific assets and deliberately preserves TeknoParrot's installed `OpenParrot64.dll`. The configurator performs a complete read-only preflight before changing anything and never automatically selects a WMMT6 ROM.
 
 After configuration, run `WMMT6-Borderless.bat` beside `TeknoParrotUi.exe`. It starts AMAuth outside OpenParrot injection and launches WMMT6 through a generated single-executable profile in centered, monitor-aware 16:9 borderless mode.
 
@@ -44,6 +44,8 @@ Client setup v1.1.8 fixes OpenParrot detection for the supported WMMT6 1.03.04 e
 Client setup v1.1.9 leaves both WMMT6 executables under TeknoParrot's control. The borderless helper no longer starts or stops a second `AMAuthd.exe`, preventing duplicate OpenParrot injection and access-violation crashes on two-executable profiles.
 
 Client setup v1.2.0 supersedes v1.1.9 after crash evidence showed that TeknoParrot injected `OpenParrot64.dll` into `AMAuthd.exe`. It generates `WMMT6-Bayshore.xml` profile copies with the second executable disabled, starts AMAuth directly, and uses OpenParrot only for `wmn6r.exe`. Existing profiles remain unchanged.
+
+Client setup v1.3.0 removes the custom OpenParrot DLL after repeated `0xc0000005` crashes inside its native WMMT6/D3D hooks. Setup now preserves the TeknoParrot-supplied DLL and rejects the known crashing hashes from earlier releases.
 
 ## Player Data Backup, Restore, and Merge
 

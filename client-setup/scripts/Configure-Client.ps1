@@ -152,8 +152,21 @@ if ($gameHash -notin $expectedGameHashes) {
     throw "Unsupported wmn6r.exe SHA-256: $gameHash. This package supports WMMT6 1.03.04 only."
 }
 
+$installedOpenParrotPath = Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll'
+if (-not (Test-Path -LiteralPath $installedOpenParrotPath -PathType Leaf)) {
+    throw "TeknoParrot's OpenParrot64.dll is missing: $installedOpenParrotPath"
+}
+$installedOpenParrotHash = (Get-FileHash -LiteralPath $installedOpenParrotPath -Algorithm SHA256).Hash
+$knownCrashingOpenParrotHashes = @(
+    'C91922AFAEEBFA9EF81BE2FA532DBCF0E6F4A2DF6EA3C91C5F84AD86D7790952',
+    'BF36B6971738F8B43C400BF07CB422729A8B1065CB429A1978E89782FD09A5E9'
+)
+if ($installedOpenParrotHash -in $knownCrashingOpenParrotHashes) {
+    throw "The installed OpenParrot64.dll is a known crashing build from an older Bayshore client package ($installedOpenParrotHash). Restore OpenParrot64.dll using TeknoParrot's updater or a clean TeknoParrot backup, then rerun setup. No client files were changed."
+}
+Write-Host "Preserving TeknoParrot-supplied OpenParrot64.dll: $installedOpenParrotPath (SHA-256 $installedOpenParrotHash)"
+
 $requiredClientAssets = @(
-    @{ Name = 'OpenParrot64.dll'; Hash = 'BF36B6971738F8B43C400BF07CB422729A8B1065CB429A1978E89782FD09A5E9'; Candidates = @((Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll')) },
     @{ Name = 'bngrw.dll'; Hash = '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'; Candidates = @((Join-Path $gameRoot 'bngrw.dll')) },
     @{ Name = 'setting.lua.gz'; Hash = '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'; Candidates = @((Join-Path $gameRoot 'TP\setting.lua.gz')) },
     @{ Name = 'server_wangan.crt'; Hash = 'D3A67BD19DCE52D8062EA5D83A555311B25DD675010B6E7B49D60FA42AB6E377'; Candidates = @(
@@ -314,7 +327,6 @@ function Install-VerifiedAsset([string]$Name, [string]$Destination, [string]$Exp
     Copy-Item -LiteralPath $source -Destination $Destination -Force
 }
 
-Install-VerifiedAsset 'OpenParrot64.dll' (Join-Path $tpRoot 'OpenParrotx64\OpenParrot64.dll') 'BF36B6971738F8B43C400BF07CB422729A8B1065CB429A1978E89782FD09A5E9'
 Install-VerifiedAsset 'bngrw.dll' (Join-Path $gameRoot 'bngrw.dll') '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'
 Install-VerifiedAsset 'setting.lua.gz' (Join-Path $gameRoot 'TP\setting.lua.gz') '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'
 
