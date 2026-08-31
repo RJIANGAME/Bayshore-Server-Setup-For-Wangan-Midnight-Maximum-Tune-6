@@ -92,6 +92,31 @@ do {
 } while ((Get-Date) -lt $terminalDeadline)
 if (-not $udp) { throw 'MaxiTerminal is running but did not bind UDP 50765.' }
 
+$relayEnabled = $config.PSObject.Properties.Name -contains 'TerminalRelayEnabled' -and [bool]$config.TerminalRelayEnabled
+$relayClients = @($config.TerminalRelayClientIps) | ForEach-Object { [string]$_ } | Where-Object { $_ }
+$relay = $null
+if ($relayEnabled -and $relayClients.Count -gt 0) {
+    $relayScript = Join-Path $PSScriptRoot 'Relay-MaxiTerminal.ps1'
+    if (-not (Test-Path -LiteralPath $relayScript -PathType Leaf)) { throw "Terminal relay script is missing: $relayScript" }
+    $relayPidPath = Join-Path $setupRoot 'terminal-relay.pid'
+    if (Test-Path -LiteralPath $relayPidPath -PathType Leaf) {
+        $relayPid = 0
+        if ([int]::TryParse((Get-Content -LiteralPath $relayPidPath -Raw).Trim(), [ref]$relayPid)) {
+            $relayCommand = Get-CimInstance Win32_Process -Filter "ProcessId=$relayPid" -ErrorAction SilentlyContinue
+            if ($relayCommand.CommandLine -match 'Relay-MaxiTerminal\.ps1') {
+                $relay = Get-Process -Id $relayPid -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    if (-not $relay) {
+        $relayArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$relayScript`""
+        $relay = Start-Process -FilePath 'powershell.exe' -ArgumentList $relayArgs -WorkingDirectory $setupRoot -WindowStyle Hidden -PassThru
+        Start-Sleep -Seconds 2
+        $relay.Refresh()
+        if ($relay.HasExited) { throw "Terminal unicast relay exited during startup with code $($relay.ExitCode)." }
+    }
+}
+
 if (-not $SkipWatchdog) {
     $watchdogScript = Join-Path $PSScriptRoot 'Watch-Bayshore-And-Terminal.ps1'
     $watchdogPidPath = Join-Path $setupRoot 'watchdog.pid'
@@ -112,4 +137,5 @@ if (-not $SkipWatchdog) {
 Write-Host 'PostgreSQL, Bayshore, and WMMT6 terminal are ready.' -ForegroundColor Green
 Write-Host "Server: https://${serverIp}:$servicePort"
 Write-Host "Terminal PID: $($existing.Id), UDP 50765"
+if ($relay) { Write-Host "Terminal unicast relay PID: $($relay.Id); clients: $($relayClients -join ', ')" }
 if (-not $SkipWatchdog) { Write-Host 'Recovery watchdog: running' }

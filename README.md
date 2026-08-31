@@ -60,11 +60,11 @@ WMMT6 cabinets cannot pass the terminal link checks with Bayshore alone. Install
 1. Run `Configure-Server-Terminal.bat` as administrator.
 2. Select the configured Bayshore root.
 3. Select your legally obtained `MaxiTerminal.exe`.
-4. Use `Start-Bayshore-And-Terminal.bat` for daily startup. It cleanly restarts PostgreSQL, Bayshore, and MaxiTerminal, then runs a recovery watchdog.
+4. Use `Start-Bayshore-And-Terminal.bat` for daily startup. It cleanly restarts PostgreSQL, Bayshore, MaxiTerminal, and the optional terminal unicast relay, then runs a recovery watchdog.
 
 The installer verifies the approved WMMT6 binary, copies it into `bin\MaxiTerminal`, generates its configuration from Bayshore's `serverIp` and `SERVICE_PORT`, and opens inbound UDP 50765. The public ZIP cannot include MaxiTerminal itself because no redistribution license is available.
 
-The watchdog checks the complete stack every 10 seconds and restarts it after three consecutive health failures. It also restarts after 60 minutes without LAN client activity so a stale idle terminal/database session cannot block the next cabinet. `Stop-Bayshore-And-Terminal.bat` stops PostgreSQL as well as Bayshore, MaxiTerminal, and the watchdog. See [`server-terminal-setup/README.md`](server-terminal-setup/README.md) for settings and logs.
+The watchdog checks the complete stack every 10 seconds and restarts it after three consecutive health failures. It also restarts after 60 minutes without LAN client activity so a stale idle terminal/database session cannot block the next cabinet. For routers that intermittently drop MaxiTerminal multicast, configure `TerminalRelayClientIps` to copy validated terminal heartbeats to cabinets as unicast. `Stop-Bayshore-And-Terminal.bat` stops PostgreSQL as well as Bayshore, MaxiTerminal, the relay, and the watchdog. See [`server-terminal-setup/README.md`](server-terminal-setup/README.md) for settings and logs.
 
 ## Player Data Backup, Restore, and Merge
 

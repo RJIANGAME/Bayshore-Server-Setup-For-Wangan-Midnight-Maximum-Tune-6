@@ -2,6 +2,7 @@
 param(
     [string]$BayshoreRoot,
     [string]$MaxiTerminalPath,
+    [string[]]$TerminalRelayClientIp,
     [switch]$SkipFirewall
 )
 
@@ -106,6 +107,24 @@ $terminalConfig = [ordered]@{
 }
 [IO.File]::WriteAllText((Join-Path $terminalRoot 'config.json'), ($terminalConfig | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
+$existingInstalledConfig = $null
+$installedConfigPath = Join-Path $setupRoot 'server-terminal.json'
+if (Test-Path -LiteralPath $installedConfigPath -PathType Leaf) {
+    $existingInstalledConfig = Get-Content -LiteralPath $installedConfigPath -Raw | ConvertFrom-Json
+}
+if (-not $TerminalRelayClientIp -and $existingInstalledConfig -and
+    $existingInstalledConfig.PSObject.Properties.Name -contains 'TerminalRelayClientIps') {
+    $TerminalRelayClientIp = @($existingInstalledConfig.TerminalRelayClientIps)
+}
+$relayClientIps = @($TerminalRelayClientIp) | ForEach-Object { [string]$_ } | Where-Object { $_ } | Sort-Object -Unique
+foreach ($clientIp in $relayClientIps) {
+    $parsedClientIp = $null
+    if (-not [Net.IPAddress]::TryParse($clientIp, [ref]$parsedClientIp) -or
+        $parsedClientIp.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $clientIp -eq $serverIp) {
+        throw "Invalid terminal relay client IPv4 address: $clientIp"
+    }
+}
+
 $installedConfig = [ordered]@{
     BayshoreRoot = $BayshoreRoot
     ApplicationRoot = $applicationRoot
@@ -117,8 +136,10 @@ $installedConfig = [ordered]@{
     IdleRestartMinutes = 60
     HealthCheckSeconds = 10
     HealthFailureThreshold = 3
+    TerminalRelayEnabled = $relayClientIps.Count -gt 0
+    TerminalRelayClientIps = $relayClientIps
 }
-[IO.File]::WriteAllText((Join-Path $setupRoot 'server-terminal.json'), ($installedConfig | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText($installedConfigPath, ($installedConfig | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
 if (-not $SkipFirewall) {
     $ruleName = 'Bayshore WMMT6 MaxiTerminal UDP 50765'
@@ -130,4 +151,5 @@ Write-Host 'Verified and installed the user-supplied MaxiTerminal.' -ForegroundC
 Write-Host "Server IP: $serverIp"
 Write-Host "Game service: https://${serverIp}:$servicePort"
 Write-Host "Terminal: $terminalExe"
+if ($relayClientIps.Count -gt 0) { Write-Host "Terminal unicast relay clients: $($relayClientIps -join ', ')" }
 Write-Host 'Run Start-Bayshore-And-Terminal.bat for daily startup.'

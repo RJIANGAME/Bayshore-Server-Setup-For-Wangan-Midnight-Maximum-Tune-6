@@ -22,6 +22,18 @@ if (-not $KeepWatchdog) {
     }
 }
 
+$relayPidPath = Join-Path $setupRoot 'terminal-relay.pid'
+if (Test-Path -LiteralPath $relayPidPath -PathType Leaf) {
+    $relayPid = 0
+    if ([int]::TryParse((Get-Content -LiteralPath $relayPidPath -Raw).Trim(), [ref]$relayPid) -and $relayPid -ne $PID) {
+        $relayCommand = Get-CimInstance Win32_Process -Filter "ProcessId=$relayPid" -ErrorAction SilentlyContinue
+        if ($relayCommand.CommandLine -match 'Relay-MaxiTerminal\.ps1') {
+            Stop-Process -Id $relayPid -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Remove-Item -LiteralPath $relayPidPath -Force -ErrorAction SilentlyContinue
+}
+
 Get-Process -Name 'MaxiTerminal' -ErrorAction SilentlyContinue |
     Where-Object { try { [IO.Path]::GetFullPath($_.Path) -ieq $terminalExe } catch { $false } } |
     Stop-Process -Force -ErrorAction Stop
@@ -53,4 +65,4 @@ if ($pgRoot -and (Test-Path -LiteralPath $pgData -PathType Container)) {
     }
 }
 
-Write-Host 'PostgreSQL, Bayshore, and WMMT6 terminal stop completed.' -ForegroundColor Green
+Write-Host 'PostgreSQL, Bayshore, WMMT6 terminal, and terminal relay stop completed.' -ForegroundColor Green

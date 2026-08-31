@@ -27,6 +27,8 @@ $idleMinutes = if ($null -ne $config.IdleRestartMinutes) { [Math]::Max(5, [int]$
 $checkSeconds = if ($null -ne $config.HealthCheckSeconds) { [Math]::Max(10, [int]$config.HealthCheckSeconds) } else { 10 }
 $failureThreshold = if ($null -ne $config.HealthFailureThreshold) { [Math]::Max(2, [int]$config.HealthFailureThreshold) } else { 3 }
 $enabled = if ($null -ne $config.WatchdogEnabled) { [bool]$config.WatchdogEnabled } else { $true }
+$relayEnabled = $config.PSObject.Properties.Name -contains 'TerminalRelayEnabled' -and [bool]$config.TerminalRelayEnabled -and @($config.TerminalRelayClientIps).Count -gt 0
+$relayPidPath = Join-Path $setupRoot 'terminal-relay.pid'
 
 if (-not $enabled) { exit 0 }
 [IO.File]::WriteAllText($pidPath, [string]$PID, [Text.Encoding]::ASCII)
@@ -47,6 +49,17 @@ try {
             Get-NetUDPEndpoint -LocalPort 50765 -ErrorAction SilentlyContinue |
                 Where-Object OwningProcess -eq $terminal.Id | Select-Object -First 1
         }
+        $relayOk = $true
+        if ($relayEnabled) {
+            $relayOk = $false
+            if (Test-Path -LiteralPath $relayPidPath -PathType Leaf) {
+                $relayPid = 0
+                if ([int]::TryParse((Get-Content -LiteralPath $relayPidPath -Raw).Trim(), [ref]$relayPid)) {
+                    $relayCommand = Get-CimInstance Win32_Process -Filter "ProcessId=$relayPid" -ErrorAction SilentlyContinue
+                    $relayOk = $relayCommand.CommandLine -match 'Relay-MaxiTerminal\.ps1'
+                }
+            }
+        }
 
         & curl.exe --insecure --silent --fail --max-time 5 "https://127.0.0.1:$servicePort/readyz" *> $null
         $serviceOk = $LASTEXITCODE -eq 0
@@ -57,7 +70,7 @@ try {
             $databaseOk = $LASTEXITCODE -eq 0
         }
 
-        if ($serviceOk -and $databaseOk -and $terminal -and $terminalUdp) { $failureCount = 0 } else { $failureCount++ }
+        if ($serviceOk -and $databaseOk -and $terminal -and $terminalUdp -and $relayOk) { $failureCount = 0 } else { $failureCount++ }
 
         $clientConnection = Get-NetTCPConnection -LocalPort 80, 10082, $servicePort -ErrorAction SilentlyContinue |
             Where-Object {
