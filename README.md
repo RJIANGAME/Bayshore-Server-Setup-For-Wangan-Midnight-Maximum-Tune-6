@@ -67,10 +67,10 @@ The repository includes root-level database tools for the portable Bayshore serv
 | Tool | Result |
 |---|---|
 | `Backup-Player-Data.bat` | Creates `backups\bayshore-YYYYMMDD-HHMMSS.dump` under the Bayshore server root. |
-| `Restore-Player-Data.bat` | Lets the user select a dump, creates a safety backup, then deletes and atomically replaces the current save. |
-| `Merge-Player-Data.bat` | Lets the user select a dump, creates a safety backup, and imports previously unseen card IDs without replacing current players. |
+| `Restore-Player-Data.bat` | Preserves MaxiTerminal configuration, replaces the current save atomically, then restarts the configured combined stack. |
+| `Merge-Player-Data.bat` | Preserves MaxiTerminal configuration, imports previously unseen card IDs, then restarts the configured combined stack. |
 
-Keep the BAT files and `server-tools` folder together in the Bayshore server root. Restore requires typing `RESTORE`; merge requires typing `MERGE`. Both operations stop the Bayshore application while PostgreSQL is changed.
+Keep the BAT files and `server-tools` folder together in the Bayshore server root. Restore requires typing `RESTORE`; merge requires typing `MERGE`. Both operations stop the Bayshore application while PostgreSQL is changed, preserve `bin\MaxiTerminal\config.json` as a timestamped backup, restore the exact file afterward, and restart Bayshore plus MaxiTerminal when the combined launcher is installed.
 
 The conservative merge imports core player/card progress and remaps database IDs. Duplicate cards and destination-wide crowns, events, rankings, rival history, and place/file records remain unchanged. Both databases must use the same Bayshore migration set. See [`server-tools/README.md`](server-tools/README.md) for the exact scope and recovery procedure.
 

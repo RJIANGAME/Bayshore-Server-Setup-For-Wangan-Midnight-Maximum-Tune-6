@@ -13,6 +13,7 @@ Test-DatabaseDump $layout $DumpPath
 Confirm-DestructiveAction 'MERGE' `
     "This imports previously unseen card IDs from '$DumpPath'. Existing cards and destination-wide event/ranking data remain unchanged. A safety backup will be created first."
 
+$terminalConfigSnapshot = New-MaxiTerminalConfigSnapshot $layout
 Stop-BayshoreApplication $layout
 Ensure-PostgresRunning $layout $settings
 $safetyBackup = New-DatabaseBackup $layout $settings 'before-merge'
@@ -25,6 +26,7 @@ $psql = Find-PostgresTool $layout.ServerRoot 'psql'
 $temporaryDatabase = 'bayshore_merge_{0}_{1}' -f $PID, (Get-Date -Format 'yyyyMMddHHmmss')
 $temporarySql = Join-Path ([IO.Path]::GetTempPath()) "$temporaryDatabase.sql"
 $createdTemporaryDatabase = $false
+$mergeSucceeded = $false
 
 try {
     Invoke-WithDatabasePassword $settings {
@@ -149,6 +151,7 @@ COMMIT;
     if ($importUsers -eq 0) {
         Write-Host 'No new card IDs were found. The current database was not changed.' -ForegroundColor Yellow
         Write-Host "Safety backup: $safetyBackup"
+        $mergeSucceeded = $true
         return
     }
 
@@ -185,8 +188,10 @@ COMMIT;
     Write-Host "Merge completed: imported $importUsers new player(s) and $importCars car(s)." -ForegroundColor Green
     Write-Host 'Existing cards and destination-wide crowns/events/rival history were unchanged.'
     Write-Host "Rollback backup: $safetyBackup"
+    $mergeSucceeded = $true
 }
 finally {
+    Restore-MaxiTerminalConfigSnapshot $terminalConfigSnapshot
     if (Test-Path -LiteralPath $temporarySql) {
         Remove-Item -LiteralPath $temporarySql -Force -ErrorAction SilentlyContinue
     }
@@ -195,4 +200,5 @@ finally {
             & $dropdb -h $settings.HostName -p $settings.Port -U $settings.User --force $temporaryDatabase *> $null
         }
     }
+    if ($mergeSucceeded) { Start-BayshoreApplication $layout }
 }

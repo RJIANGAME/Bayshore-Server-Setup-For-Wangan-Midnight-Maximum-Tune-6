@@ -9,5 +9,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Restore completed successfully.
+echo Restore completed successfully. Bayshore and MaxiTerminal were restarted when configured.
 pause

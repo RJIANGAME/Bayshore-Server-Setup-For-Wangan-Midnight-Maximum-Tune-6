@@ -24,7 +24,7 @@ function Get-DatabaseSettings([string]$ServerRoot) {
     $envText = [IO.File]::ReadAllText($envPath)
     $match = [regex]::Match(
         $envText,
-        '(?m)^POSTGRES_URL=postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^\r\n]+)$'
+        '(?m)^POSTGRES_URL=postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/([^\r\n]+)\r?$'
     )
     if (-not $match.Success) { throw "POSTGRES_URL in '$envPath' is invalid." }
 
@@ -38,11 +38,16 @@ function Get-DatabaseSettings([string]$ServerRoot) {
 }
 
 function Find-PostgresTool([string]$ServerRoot, [string]$Name) {
-    $runtime = Join-Path $ServerRoot '.runtime\postgresql'
-    $tool = Get-ChildItem -LiteralPath $runtime -Filter "$Name.exe" -File -Recurse -ErrorAction SilentlyContinue |
+    $runtimeCandidates = @(
+        (Join-Path $ServerRoot '.runtime\postgresql'),
+        (Join-Path $ServerRoot '.runtime\pgsql')
+    )
+    $tool = $runtimeCandidates |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Container } |
+        ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter "$Name.exe" -File -Recurse -ErrorAction SilentlyContinue } |
         Select-Object -First 1
     if (-not $tool) { $tool = Get-Command $Name -ErrorAction SilentlyContinue }
-    if (-not $tool) { throw "$Name.exe was not found under '$runtime' or in PATH." }
+    if (-not $tool) { throw "$Name.exe was not found under the portable PostgreSQL runtime or in PATH." }
     if ($tool -is [IO.FileInfo]) { return $tool.FullName }
     return $tool.Source
 }
@@ -114,6 +119,54 @@ function Stop-BayshoreApplication($Layout) {
     if (Test-Path -LiteralPath $stopScript) {
         & $stopScript
         if ($LASTEXITCODE -ne 0) { throw 'Bayshore did not stop cleanly.' }
+    }
+}
+
+function Start-BayshoreApplication($Layout) {
+    $combinedStart = Join-Path $Layout.ServerRoot 'server-terminal-setup\scripts\Start-Bayshore-And-Terminal.ps1'
+    $sourceStart = Join-Path $Layout.ServerRoot 'scripts\Start.ps1'
+    $portableStart = Join-Path $Layout.ServerRoot 'scripts\Start-PublishedServer.ps1'
+    if (Test-Path -LiteralPath $combinedStart -PathType Leaf) {
+        & $combinedStart
+    }
+    elseif (Test-Path -LiteralPath $portableStart -PathType Leaf) {
+        & $portableStart
+    }
+    elseif (Test-Path -LiteralPath $sourceStart -PathType Leaf) {
+        & $sourceStart -Background
+    }
+    else {
+        Write-Warning 'Restore completed, but no supported Bayshore start script was found.'
+    }
+}
+
+function New-MaxiTerminalConfigSnapshot($Layout) {
+    $configPath = Join-Path $Layout.ServerRoot 'bin\MaxiTerminal\config.json'
+    if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) { return $null }
+
+    $bytes = [IO.File]::ReadAllBytes($configPath)
+    New-Item -ItemType Directory -Force -Path $Layout.BackupRoot | Out-Null
+    $copyPath = Join-Path $Layout.BackupRoot ("MaxiTerminal-config-{0}.json" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    [IO.File]::WriteAllBytes($copyPath, $bytes)
+    Write-Host "MaxiTerminal configuration preserved at '$copyPath'."
+
+    [pscustomobject]@{
+        Path = $configPath
+        Bytes = $bytes
+        BackupPath = $copyPath
+    }
+}
+
+function Restore-MaxiTerminalConfigSnapshot($Snapshot) {
+    if (-not $Snapshot) { return }
+    $currentBytes = if (Test-Path -LiteralPath $Snapshot.Path -PathType Leaf) {
+        [IO.File]::ReadAllBytes($Snapshot.Path)
+    } else { [byte[]]@() }
+    $before = [Convert]::ToBase64String([byte[]]$Snapshot.Bytes)
+    $after = [Convert]::ToBase64String([byte[]]$currentBytes)
+    if ($before -ne $after) {
+        [IO.File]::WriteAllBytes($Snapshot.Path, [byte[]]$Snapshot.Bytes)
+        Write-Host 'Restored the pre-operation MaxiTerminal configuration.' -ForegroundColor Green
     }
 }
 

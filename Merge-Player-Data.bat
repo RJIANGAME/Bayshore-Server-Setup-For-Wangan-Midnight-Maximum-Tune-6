@@ -9,5 +9,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Merge completed successfully.
+echo Merge completed successfully. Bayshore and MaxiTerminal were restarted when configured.
 pause
