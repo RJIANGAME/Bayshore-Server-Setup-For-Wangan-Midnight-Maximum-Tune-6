@@ -47,6 +47,8 @@ Client setup v1.2.0 supersedes v1.1.9 after crash evidence showed that TeknoParr
 
 Client setup v1.3.0 removes the custom OpenParrot DLL after repeated `0xc0000005` crashes inside its native WMMT6/D3D hooks. Setup now preserves the TeknoParrot-supplied DLL and rejects the known crashing hashes from earlier releases.
 
+Client setup v1.4.0 supports up to four simultaneous LAN cabinets by assigning a unique AMAuth `netID` to each client. It also detects the WMMT6 drive serial embedded in OpenParrot and writes the exact matching `serialID`, preventing startup from stopping between ALL.Net and MUCHA.
+
 Client setup v1.3.1 configures the existing WMMT6 user profile directly, applies the selected game path, keeps `Windowed=0` to avoid the confirmed OpenParrot DXGI crash, applies the detected client adapter and real default gateway, removes obsolete duplicate profiles, and reinforces borderless styling while the game runs.
 
 ## Server MaxiTerminal Setup

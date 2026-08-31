@@ -1,6 +1,6 @@
 # Required client assets
 
-The v1.3.1 release ZIP includes the four verified Bayshore-specific files below. `OpenParrot64.dll` is intentionally not included or replaced; use the version supplied by the installed TeknoParrot release.
+The v1.4.0 release ZIP includes the four verified Bayshore-specific files below. `OpenParrot64.dll` is intentionally not included or replaced; use the version supplied by the installed TeknoParrot release.
 
 | File | Required SHA-256 |
 |---|---|
