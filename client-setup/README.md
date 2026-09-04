@@ -48,9 +48,9 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - `iauthdll.dll` registration;
 - `WMMT6-Launch.bat` and its helper/config beside `TeknoParrotUi.exe`.
 
-The safe launcher starts `AMAuthd.exe` directly so OpenParrot is never injected into it, then launches the existing WMMT6 profile through TeknoParrot. The required OpenParrot White Screen Fix stays enabled to prevent flashing, while its unstable `Windowed` option stays disabled. The launcher does not change Windows resolution, restyle or resize the game window, create a backdrop, or inject an extra DLL. It validates the profile and server first, writes a launch log, and copies a recent WER report when the game exits unexpectedly.
+The launcher starts `AMAuthd.exe` directly so OpenParrot is never injected into it, then launches the existing WMMT6 profile through TeknoParrot. The required OpenParrot White Screen Fix stays enabled to prevent flashing, while its unstable `Windowed` option stays disabled. After the game creates its window, the launcher removes the border and fits a centered 16:9 image inside the current monitor. Non-16:9 displays get black bars instead of a stretched picture. Windows display resolution is never changed and no extra DLL is injected. The launcher validates the profile and server first, writes a launch log, and copies a recent WER report when the game exits unexpectedly.
 
-Setup backs up and removes the obsolete `WMMT6-Borderless.*` helper from the selected TeknoParrot root. Do not restore or run it together with the White Screen Fix.
+Setup backs up and removes the obsolete independent `WMMT6-Borderless.*` helper from the selected TeknoParrot root. Its aspect-preserving behavior is now built into `WMMT6-Launch.bat`, avoiding two launchers competing for AMAuth or the game window.
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
 

@@ -540,9 +540,9 @@ foreach ($obsoleteProfile in @(
 $identity.ProfileFile = $baseProfile.Name
 [IO.File]::WriteAllText($identityPath, ($identity | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
-# Install a minimal default launcher. It starts AMAuth directly and lets
-# TeknoParrot launch/inject only wmn6r.exe. WhiteScreenFix remains enabled in
-# OpenParrot, while this launcher never changes resolution or window styles.
+# Install the coordinated launcher. It starts AMAuth directly, lets TeknoParrot
+# launch/inject only wmn6r.exe, then applies a centered 16:9 borderless window
+# with black bars when the monitor is not 16:9. It never changes display mode.
 $safeLauncherBat = Join-Path $tpRoot 'WMMT6-Launch.bat'
 $safeLauncherScript = Join-Path $tpRoot 'WMMT6-Launch.ps1'
 $safeLauncherConfig = Join-Path $tpRoot 'WMMT6-Launch.json'
@@ -558,11 +558,13 @@ $safeLauncherSettings = [ordered]@{
     ServerUri = "https://$($config.ServerIp):9002"
     OpenParrotPath = $installedOpenParrotPath
     OpenParrotSha256 = $installedOpenParrotHash
+    AspectWidth = 16
+    AspectHeight = 9
 }
 [IO.File]::WriteAllText($safeLauncherConfig, ($safeLauncherSettings | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
-# Retire the old external window/resolution helper. Backups make this reversible,
-# but leaving its BAT beside TeknoParrot risks launching the crashing path again.
+# Retire the old independent window/resolution helper. Borderless mode is now
+# integrated into WMMT6-Launch.bat so only one launcher owns AMAuth and the game.
 foreach ($obsoleteLauncher in 'WMMT6-Borderless.bat', 'WMMT6-Borderless.ps1', 'WMMT6-Borderless.json') {
     $obsoletePath = Join-Path $tpRoot $obsoleteLauncher
     if (Test-Path -LiteralPath $obsoletePath -PathType Leaf) {
@@ -659,9 +661,9 @@ Write-Host 'WMMT6 client configuration completed successfully.' -ForegroundColor
 Write-Host "Backups: $backupRoot"
 Write-Host "Server: https://$($config.ServerIp):9002"
 Write-Host "TeknoParrot profile (configured in place): $profilePath"
-Write-Host "Safe launcher (recommended): $safeLauncherBat"
+Write-Host "Aspect-preserving borderless launcher: $safeLauncherBat"
 Write-Host 'White Screen Fix: enabled; Windowed mode: disabled'
-Write-Host 'External borderless/resolution helper: removed'
+Write-Host 'Borderless mode: centered 16:9 with black bars; display resolution is unchanged'
 Write-Host "Client identity: $identityPath"
 Write-Host "Cabinet number (AMAuth netID): $cabinetId"
 Write-Host "Matched AMAuth serial: $driveSerial"

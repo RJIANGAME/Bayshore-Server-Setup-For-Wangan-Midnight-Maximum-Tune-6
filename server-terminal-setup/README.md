@@ -24,7 +24,7 @@ Add stable cabinet IPv4 addresses to `server-terminal.json`:
 
 When automating setup, call `scripts\Configure-Server-Terminal.ps1 -TerminalRelayClientIp <IP1>,<IP2>`; otherwise preserve or edit these generated settings before daily startup. The relay starts and stops with the stack, writes `terminal-relay.log`, and is monitored by the watchdog. Ethernet remains preferable, but the relay provides reliable delivery when the venue must use Wi-Fi.
 
-Daily start does not request administrator elevation. Run `Configure-Server-Terminal.bat` as administrator once to create the firewall rule; the start BAT then keeps any startup error visible in its own window and is safe to run when the database is either running or already stopped. PostgreSQL is launched in a detached hidden process so closing the start BAT window cannot send Ctrl+C to the database and leave every cabinet showing a terminal `NG` result.
+Daily start requests administrator elevation only when Windows IIS owns TCP 80. In that case it stops IIS, changes its startup type to Manual, and continues automatically after the normal UAC approval. Run `Configure-Server-Terminal.bat` as administrator once to create the firewall rule; the start BAT then keeps any startup error visible in its own window and is safe to run when the database is either running or already stopped. PostgreSQL is launched in a detached hidden process so closing the start BAT window cannot send Ctrl+C to the database and leave every cabinet showing a terminal `NG` result.
 
 The ZIP does not contain MaxiTerminal because no redistribution license is available. The approved WMMT6 executable SHA-256 is `DF792DE6500F1A9836439535846B12E2391024E98097DE4E7145F29027F262AF`.
 

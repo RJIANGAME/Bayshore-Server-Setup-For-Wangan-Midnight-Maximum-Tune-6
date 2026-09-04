@@ -7,6 +7,8 @@ client-setup/generated-client-identity.json
 server-terminal-setup/server-terminal.json
 server-terminal-setup/watchdog.pid
 server-terminal-setup/watchdog.log
+server-terminal-setup/terminal-relay.pid
+server-terminal-setup/terminal-relay.log
 backups/
 *.dump
 __pycache__/

@@ -1,13 +1,17 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$Borderless
+)
 
 $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     $quotedScript = '"' + $PSCommandPath.Replace('"', '""') + '"'
+    $elevationArguments = @('-Sta', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $quotedScript)
+    if ($Borderless) { $elevationArguments += '-Borderless' }
     $child = Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -PassThru -WorkingDirectory $PSScriptRoot `
-        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $quotedScript)
+        -ArgumentList $elevationArguments
     exit $child.ExitCode
 }
 
@@ -61,6 +65,174 @@ function Write-LaunchLog([string]$Message) {
     Write-Host $line
 }
 
+if ($Borderless) {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    if (-not ('WmmtBorderlessNative' -as [type])) {
+        Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class WmmtBorderlessNative
+{
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", SetLastError=true)]
+    public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr value);
+
+    [DllImport("user32.dll", SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr hWnd, int command);
+}
+'@
+    }
+    [void][WmmtBorderlessNative]::SetProcessDPIAware()
+}
+
+$borderlessState = $null
+function Start-BorderlessSession([Diagnostics.Process]$GameProcess) {
+    $windowDeadline = (Get-Date).AddMinutes(1)
+    $window = [IntPtr]::Zero
+    do {
+        $GameProcess.Refresh()
+        if ($GameProcess.HasExited) { throw 'WMMT6 exited before creating its game window.' }
+        $window = $GameProcess.MainWindowHandle
+        if ($window -ne [IntPtr]::Zero) { break }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $windowDeadline)
+    if ($window -eq [IntPtr]::Zero) { throw 'WMMT6 did not create a usable window within one minute.' }
+
+    $monitor = [WmmtBorderlessNative]::MonitorFromWindow($window, 2)
+    $monitorInfo = New-Object WmmtBorderlessNative+MONITORINFO
+    $monitorInfo.cbSize = [Runtime.InteropServices.Marshal]::SizeOf([type][WmmtBorderlessNative+MONITORINFO])
+    if (-not [WmmtBorderlessNative]::GetMonitorInfo($monitor, [ref]$monitorInfo)) {
+        throw 'Could not read the WMMT6 monitor bounds.'
+    }
+
+    $bounds = $monitorInfo.rcMonitor
+    $monitorWidth = $bounds.Right - $bounds.Left
+    $monitorHeight = $bounds.Bottom - $bounds.Top
+    $aspectWidth = 16.0
+    $aspectHeight = 9.0
+    if ($config.PSObject.Properties.Name -contains 'AspectWidth' -and [double]$config.AspectWidth -gt 0) {
+        $aspectWidth = [double]$config.AspectWidth
+    }
+    if ($config.PSObject.Properties.Name -contains 'AspectHeight' -and [double]$config.AspectHeight -gt 0) {
+        $aspectHeight = [double]$config.AspectHeight
+    }
+    $targetAspect = $aspectWidth / $aspectHeight
+    $targetWidth = $monitorWidth
+    $targetHeight = [int][Math]::Floor($targetWidth / $targetAspect)
+    if ($targetHeight -gt $monitorHeight) {
+        $targetHeight = $monitorHeight
+        $targetWidth = [int][Math]::Floor($targetHeight * $targetAspect)
+    }
+    $targetLeft = $bounds.Left + [int][Math]::Floor(($monitorWidth - $targetWidth) / 2.0)
+    $targetTop = $bounds.Top + [int][Math]::Floor(($monitorHeight - $targetHeight) / 2.0)
+
+    $originalStyle = [WmmtBorderlessNative]::GetWindowLongPtr($window, -16)
+    $originalExStyle = [WmmtBorderlessNative]::GetWindowLongPtr($window, -20)
+    $originalRect = New-Object WmmtBorderlessNative+RECT
+    [void][WmmtBorderlessNative]::GetWindowRect($window, [ref]$originalRect)
+
+    $backdrop = New-Object System.Windows.Forms.Form
+    $backdrop.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
+    $backdrop.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
+    $backdrop.ShowInTaskbar = $false
+    $backdrop.BackColor = [Drawing.Color]::Black
+    $backdrop.TopMost = $true
+    $backdrop.Bounds = New-Object Drawing.Rectangle($bounds.Left, $bounds.Top, $monitorWidth, $monitorHeight)
+    $backdrop.Show()
+
+    $state = [pscustomobject]@{
+        Window = $window
+        OriginalStyle = $originalStyle
+        OriginalExStyle = $originalExStyle
+        OriginalRect = $originalRect
+        Backdrop = $backdrop
+        Left = $targetLeft
+        Top = $targetTop
+        Width = $targetWidth
+        Height = $targetHeight
+        Aspect = ('{0:g}:{1:g}' -f $aspectWidth, $aspectHeight)
+    }
+    Set-BorderlessWindow $state
+    return $state
+}
+
+function Set-BorderlessWindow($State) {
+    $window = [IntPtr]$State.Window
+    if ($window -eq [IntPtr]::Zero -or -not [WmmtBorderlessNative]::IsWindow($window)) { return }
+    [void][WmmtBorderlessNative]::ShowWindow($window, 9)
+    $removeStyle = [long](0x00C00000L -bor 0x00040000L -bor 0x20000000L -bor 0x01000000L -bor 0x00080000L -bor 0x00020000L -bor 0x00010000L)
+    $removeExStyle = [long](0x00000001L -bor 0x00000200L -bor 0x00020000L)
+    $liveStyle = [WmmtBorderlessNative]::GetWindowLongPtr($window, -16).ToInt64()
+    $liveExStyle = [WmmtBorderlessNative]::GetWindowLongPtr($window, -20).ToInt64()
+    [void][WmmtBorderlessNative]::SetWindowLongPtr($window, -16, [IntPtr]($liveStyle -band (-bnot $removeStyle)))
+    [void][WmmtBorderlessNative]::SetWindowLongPtr($window, -20, [IntPtr]($liveExStyle -band (-bnot $removeExStyle)))
+    $positioned = [WmmtBorderlessNative]::SetWindowPos(
+        $window, [IntPtr](-1), $State.Left, $State.Top, $State.Width, $State.Height, [uint32]0x0060
+    )
+    if (-not $positioned) {
+        $win32Error = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+        throw "Could not resize the WMMT6 window (Win32 error $win32Error)."
+    }
+    [System.Windows.Forms.Application]::DoEvents()
+}
+
+function Stop-BorderlessSession($State) {
+    if (-not $State) { return }
+    if ($State.Backdrop -and -not $State.Backdrop.IsDisposed) {
+        $State.Backdrop.Close()
+        $State.Backdrop.Dispose()
+    }
+    $window = [IntPtr]$State.Window
+    if ($window -ne [IntPtr]::Zero -and [WmmtBorderlessNative]::IsWindow($window)) {
+        [void][WmmtBorderlessNative]::SetWindowLongPtr($window, -16, $State.OriginalStyle)
+        [void][WmmtBorderlessNative]::SetWindowLongPtr($window, -20, $State.OriginalExStyle)
+        $rect = $State.OriginalRect
+        [void][WmmtBorderlessNative]::SetWindowPos(
+            $window, [IntPtr](-2), $rect.Left, $rect.Top,
+            ($rect.Right - $rect.Left), ($rect.Bottom - $rect.Top), [uint32]0x0060
+        )
+    }
+}
+
 $mutex = [Threading.Mutex]::new($false, 'Local\Bayshore-WMMT6-Safe-Launcher')
 if (-not $mutex.WaitOne(0)) { throw 'Another WMMT6 safe launcher is already running.' }
 
@@ -104,7 +276,11 @@ $game = $null
 $launchStarted = Get-Date
 $exitCode = 0
 try {
-    Write-LaunchLog 'Safe launch started. WhiteScreenFix=1, Windowed=0; no external resolution/window helper is used.'
+    if ($Borderless) {
+        Write-LaunchLog 'Safe launch started with integrated aspect-preserving borderless mode. WhiteScreenFix=1, Windowed=0.'
+    } else {
+        Write-LaunchLog 'Safe launch started without borderless mode. WhiteScreenFix=1, Windowed=0.'
+    }
     Write-LaunchLog "Profile=$profileFile Adapter=$adapterIp Server=$serverUri"
     Write-LaunchLog "OpenParrot SHA256=$($config.OpenParrotSha256)"
 
@@ -145,9 +321,21 @@ try {
     } while ((Get-Date) -lt $deadline)
     if (-not $game) { throw 'TeknoParrot did not start the configured wmn6r.exe within two minutes.' }
 
-    Write-LaunchLog "wmn6r.exe started as PID $($game.Id). Waiting for it to exit."
+    Write-LaunchLog "wmn6r.exe started as PID $($game.Id)."
+    if ($Borderless) {
+        $borderlessState = Start-BorderlessSession $game
+        Write-LaunchLog "Borderless mode active at $($borderlessState.Width)x$($borderlessState.Height), aspect $($borderlessState.Aspect); unused monitor area is black."
+    }
+    Write-LaunchLog 'Waiting for wmn6r.exe to exit.'
     while (-not $game.HasExited) {
-        Start-Sleep -Seconds 1
+        if ($Borderless -and $borderlessState) {
+            $liveWindow = $game.MainWindowHandle
+            if ($liveWindow -ne [IntPtr]::Zero -and $liveWindow -ne $borderlessState.Window) {
+                $borderlessState.Window = $liveWindow
+            }
+            Set-BorderlessWindow $borderlessState
+        }
+        Start-Sleep -Milliseconds 500
         $game.Refresh()
     }
     try { $exitCode = $game.ExitCode } catch { $exitCode = -1 }
@@ -164,6 +352,7 @@ catch {
     $exitCode = 1
 }
 finally {
+    Stop-BorderlessSession $borderlessState
     if ($startedAuth -and -not $startedAuth.HasExited) {
         Write-LaunchLog "Stopping launcher-owned AMAuth process $($startedAuth.Id)."
         Stop-Process -Id $startedAuth.Id -Force -ErrorAction SilentlyContinue
@@ -174,4 +363,3 @@ finally {
 }
 
 exit $exitCode
-

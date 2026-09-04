@@ -16,6 +16,35 @@ $terminalExe = [IO.Path]::GetFullPath([string]$config.MaxiTerminalPath)
 $serverIp = [string]$config.ServerIp
 $servicePort = [int]$config.ServicePort
 
+# IIS registers a wildcard HTTP.sys listener on TCP 80, which conflicts with
+# Bayshore's ALL.NET listener. Only stop IIS when that exact conflict exists.
+$port80 = Get-NetTCPConnection -LocalPort 80 -ErrorAction SilentlyContinue |
+    Where-Object { $_.State -eq 'Listen' -and $_.OwningProcess -eq 4 } |
+    Select-Object -First 1
+if ($port80) {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        $elevatedArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
+        if ($Restart) { $elevatedArgs += '-Restart' }
+        if ($SkipWatchdog) { $elevatedArgs += '-SkipWatchdog' }
+        $elevated = Start-Process -FilePath 'powershell.exe' -Verb RunAs `
+            -ArgumentList $elevatedArgs -WorkingDirectory (Get-Location).Path -Wait -PassThru
+        exit $elevated.ExitCode
+    }
+    $w3svc = Get-Service -Name W3SVC -ErrorAction SilentlyContinue
+    if ($w3svc -and $w3svc.Status -eq 'Running') {
+        Stop-Service -Name W3SVC -Force
+        Set-Service -Name W3SVC -StartupType Manual
+    }
+    $was = Get-Service -Name WAS -ErrorAction SilentlyContinue
+    if ($was -and $was.Status -eq 'Running') {
+        Stop-Service -Name WAS -Force
+        Set-Service -Name WAS -StartupType Manual
+    }
+    Start-Sleep -Seconds 2
+}
+
 if ($Restart) {
     $stopScript = Join-Path $PSScriptRoot 'Stop-Bayshore-And-Terminal.ps1'
     & $stopScript
@@ -102,9 +131,12 @@ if ($relayEnabled -and $relayClients.Count -gt 0) {
     if (Test-Path -LiteralPath $relayPidPath -PathType Leaf) {
         $relayPid = 0
         if ([int]::TryParse((Get-Content -LiteralPath $relayPidPath -Raw).Trim(), [ref]$relayPid)) {
+            $relayProcess = Get-Process -Id $relayPid -ErrorAction SilentlyContinue
             $relayCommand = Get-CimInstance Win32_Process -Filter "ProcessId=$relayPid" -ErrorAction SilentlyContinue
-            if ($relayCommand.CommandLine -match 'Relay-MaxiTerminal\.ps1') {
-                $relay = Get-Process -Id $relayPid -ErrorAction SilentlyContinue
+            if ($relayProcess -and
+                ($relayCommand.CommandLine -match 'Relay-MaxiTerminal\.ps1' -or
+                 [string]::IsNullOrWhiteSpace([string]$relayCommand.CommandLine))) {
+                $relay = $relayProcess
             }
         }
     }
@@ -113,7 +145,14 @@ if ($relayEnabled -and $relayClients.Count -gt 0) {
         $relay = Start-Process -FilePath 'powershell.exe' -ArgumentList $relayArgs -WorkingDirectory $setupRoot -WindowStyle Hidden -PassThru
         Start-Sleep -Seconds 2
         $relay.Refresh()
-        if ($relay.HasExited) { throw "Terminal unicast relay exited during startup with code $($relay.ExitCode)." }
+        if ($relay.HasExited) {
+            if ($relay.ExitCode -eq 0) {
+                Write-Host 'Terminal unicast relay is already running.'
+                $relay = $null
+            } else {
+                throw "Terminal unicast relay exited during startup with code $($relay.ExitCode)."
+            }
+        }
     }
 }
 
