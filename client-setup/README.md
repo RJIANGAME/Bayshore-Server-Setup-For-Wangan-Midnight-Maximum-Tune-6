@@ -2,9 +2,9 @@
 
 This folder configures a legally obtained Japanese WMMT6 1.03.04 client to use a separate Project Asakura Bayshore server. The client computer does not need Node.js, PostgreSQL, or a full Bayshore server checkout.
 
-Use the **v1.6.0 client setup ZIP** from the repository's `releases` folder. Extract it separately on each PC, close the game, and run `Configure-Client.bat` as administrator. Choose different cabinet numbers (1, 2, 3, or 4), then launch with `WMMT6-Launch.bat` beside TeknoParrot. Upgrading users must rerun setup on each PC to install the fixes.
+Use the **v1.7.0 client setup ZIP** from the repository's `releases` folder. Extract it separately on each PC, close the game, and run `Configure-Client.bat` as administrator. Choose different cabinet numbers (1, 2, 3, or 4), then launch with `WMMT6-Launch.bat` beside TeknoParrot. Upgrading users must rerun setup on each PC to install the fixes.
 
-v1.6.0 fixes the cabinet selector: selection 1 writes game `mPcbId=0`, selection 2 writes `mPcbId=1`, and so on. Previous packages only changed AMAuth `netID`, leaving every game at cabinet 2. Setup now changes both and preserves existing calibration, credits, audio, and other Service settings. Esc closes the game normally without the CMD launch-failed message; native crashes remain failures with diagnostics.
+v1.7.0 fixes the cabinet selector: selection 1 writes game `mPcbId=0`, selection 2 writes `mPcbId=1`, and so on. Previous packages only changed AMAuth `netID`, leaving every game at cabinet 2. Setup now changes both and preserves existing calibration, credits, audio, and other Service settings. Esc closes the game normally without the CMD launch-failed message; native crashes remain failures with diagnostics.
 
 ## What setup asks for
 

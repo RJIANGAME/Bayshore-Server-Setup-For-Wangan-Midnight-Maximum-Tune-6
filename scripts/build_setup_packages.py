@@ -49,7 +49,7 @@ def main():
     parser.add_argument('--bayshore-root', type=Path, required=True)
     parser.add_argument('--setup-root', type=Path, required=True)
     parser.add_argument('--asset-zip', type=Path, required=True)
-    parser.add_argument('--version', default='1.6.0')
+    parser.add_argument('--version', default='1.7.0')
     args = parser.parse_args()
     assets = {}
     with zipfile.ZipFile(args.asset_zip) as previous:

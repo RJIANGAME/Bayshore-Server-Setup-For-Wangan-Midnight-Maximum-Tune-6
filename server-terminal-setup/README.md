@@ -15,7 +15,7 @@ The watchdog checks the database, Bayshore `/readyz`, MaxiTerminal, UDP 50765, a
 ## Wi-Fi multicast relay
 
 If versus returns to Story Mode selection, first check that each game Service
-menu shows a different cabinet number. Update client setup to v1.6.0 and rerun
+menu shows a different cabinet number. Update client setup to v1.7.0 and rerun
 it on both PCs. The previous selector changed AMAuth but left the game's PCB
 number at 2. The game stores cabinet 1-4 as `mPcbId` 0-3.
 

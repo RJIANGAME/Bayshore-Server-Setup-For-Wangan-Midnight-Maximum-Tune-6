@@ -1,8 +1,14 @@
-# Setup packages v1.6.0
+# Setup packages v1.7.0
 
-- [Client setup ZIP](Bayshore-WMMT6-Client-Setup-v1.6.0.zip?raw=true)
-- [Complete server setup ZIP](Bayshore-WMMT6-Server-Setup-v1.6.0.zip?raw=true)
-- [SHA-256 checksums](SHA256SUMS-v1.6.0.txt)
+Download both packages from the [GitHub release](https://github.com/RJIANGAME/Bayshore-Server-Setup-For-Wangan-Midnight-Maximum-Tune-6/releases/tag/v1.7.0).
+
+The server package includes Database Editor v1.7.0 with Players & Cars editing,
+background database work, search/sort/export, and stale-write protection. Both
+packages retain the cabinet selector, Esc exit, and easier LAN setup fixes.
+
+- [Client setup ZIP](Bayshore-WMMT6-Client-Setup-v1.7.0.zip?raw=true)
+- [Complete server setup ZIP](Bayshore-WMMT6-Server-Setup-v1.7.0.zip?raw=true)
+- [SHA-256 checksums](SHA256SUMS-v1.7.0.txt)
 - [Quick start](../QUICK-START.md)
 
 The bundled `server_wangan.key` is the existing public Bayshore compatibility

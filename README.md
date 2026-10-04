@@ -18,12 +18,13 @@
 > [!CAUTION]
 > Use only a clean Japanese WMMT6 game dump that you are legally entitled to possess. This guide does not provide or authorize distribution of copyrighted game data.
 
-## Start here - v1.6.0 (2026-10-04)
+## Start here - v1.7.0 (2026-10-04)
 
 Read the [quick start](QUICK-START.md) for the server and each player PC.
 
-- [Download Client Setup v1.6.0](releases/Bayshore-WMMT6-Client-Setup-v1.6.0.zip?raw=true): verified assets included; choose cabinet 1-4 and launch through TeknoParrot.
-- [Download Server Setup v1.6.0](releases/Bayshore-WMMT6-Server-Setup-v1.6.0.zip?raw=true): Bayshore source and Windows setup tools included; run `Configure-Server.bat` after installing Node.js LTS.
+- [Download Client Setup v1.7.0](https://github.com/RJIANGAME/Bayshore-Server-Setup-For-Wangan-Midnight-Maximum-Tune-6/releases/download/v1.7.0/Bayshore-WMMT6-Client-Setup-v1.7.0.zip): verified assets included; choose cabinet 1-4 and launch through TeknoParrot.
+- [Download Server Setup v1.7.0](https://github.com/RJIANGAME/Bayshore-Server-Setup-For-Wangan-Midnight-Maximum-Tune-6/releases/download/v1.7.0/Bayshore-WMMT6-Server-Setup-v1.7.0.zip): Bayshore source and Windows setup tools included; run `Configure-Server.bat` after installing Node.js LTS.
+- Database Editor v1.7.0 adds Players & Cars search/editing, responsive background operations, sorting, exact filters, CSV export, and stale-write protection. Python 3.10+ with Tkinter is required.
 - Cabinet selection now changes the game's zero-based `mPcbId` as well as AMAuth `netID`. Existing calibration and other Service settings are preserved.
 - Esc exits normally. Actual native crashes and failed startup still produce diagnostics.
 - Server setup asks for Wi-Fi terminal relay IPs, backs up existing configuration, and configures the terminal and relay firewall rules.
@@ -97,9 +98,11 @@ The conservative merge imports core player/card progress and remaps database IDs
 
 ## Graphical Database Editor
 
-`Bayshore-Database-Editor.bat` opens a dependency-free Python/Tkinter table browser for the portable PostgreSQL database. It reads the existing `.env`, uses the bundled PostgreSQL tools, supports paginated browsing, search, primary-key-targeted cell edits, inserts, deletes, and an advanced SQL console.
+`Bayshore-Database-Editor.bat` opens the v1.7.0 Python/Tkinter editor for the configured PostgreSQL database. Use Players & Cars to search card IDs/access codes/car names, view a player's cars, and edit common progress fields together. The table browser supports literal/exact filters, heading sorting, pagination, CSV export, inserts, deletes, and detailed cell editing. The SQL console defaults to a PostgreSQL read-only transaction.
 
-Safety backups are enabled by default before every write and are stored under `backups` with a `before-db-editor-` prefix. Stop Bayshore and MaxiTerminal before changing player data, but leave PostgreSQL running so the editor can connect. See [`database-editor/README.md`](database-editor/README.md).
+Loading, backups, and writes run in the background. Every write asks for confirmation and creates a backup by default. Saves refuse to overwrite fields changed since loading; multi-row deletion rolls back if any selected row changed. Python 3.10+ with Tkinter is required, with no pip dependencies.
+
+For an existing server, replace only `database-editor` and `Bayshore-Database-Editor.bat` from the server ZIP. Keep the existing database and configuration; no setup rerun is needed. See [editor instructions](database-editor/README.md).
 
 ## Quick Architecture
 
