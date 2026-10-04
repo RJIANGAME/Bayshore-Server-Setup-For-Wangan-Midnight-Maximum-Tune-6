@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'WMMT6-Client.Common.ps1')
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -233,6 +234,48 @@ function Stop-BorderlessSession($State) {
     }
 }
 
+# Observe Esc without intercepting input. Only the configured game's foreground
+# window can request a normal exit; keys in another app do not hide failures.
+if (-not ('WmmtExitMonitor' -as [type])) {
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+public static class WmmtExitMonitor {
+    [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
+    static Thread worker;
+    static volatile bool running;
+    static long lastEscape;
+    public static void Start(int gamePid) {
+        Stop();
+        Interlocked.Exchange(ref lastEscape, 0);
+        running = true;
+        worker = new Thread(() => {
+            while (running) {
+                uint foregroundPid;
+                GetWindowThreadProcessId(GetForegroundWindow(), out foregroundPid);
+                if (foregroundPid == (uint)gamePid && (GetAsyncKeyState(0x1B) & 0x8000) != 0)
+                    Interlocked.Exchange(ref lastEscape, DateTime.UtcNow.Ticks);
+                Thread.Sleep(20);
+            }
+        });
+        worker.IsBackground = true;
+        worker.Start();
+    }
+    public static bool EscapeRequested {
+        get { long ticks = Interlocked.Read(ref lastEscape);
+            return ticks > 0 && DateTime.UtcNow.Ticks - ticks <= TimeSpan.FromSeconds(3).Ticks; }
+    }
+    public static void Stop() {
+        running = false;
+        if (worker != null) { worker.Join(1000); worker = null; }
+    }
+}
+'@
+}
+
 $mutex = [Threading.Mutex]::new($false, 'Local\Bayshore-WMMT6-Safe-Launcher')
 if (-not $mutex.WaitOne(0)) { throw 'Another WMMT6 safe launcher is already running.' }
 
@@ -255,13 +298,19 @@ function Stop-ProcessAtPath([string]$Name, [string]$ExpectedPath) {
     }
 }
 
-function Save-LatestWerReport([datetime]$StartedAt) {
-    $werRoot = Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportArchive'
-    if (-not (Test-Path -LiteralPath $werRoot -PathType Container)) { return }
-    $latest = Get-ChildItem -LiteralPath $werRoot -Directory -Filter 'AppCrash_wmn6r.exe*' -ErrorAction SilentlyContinue |
-        Where-Object LastWriteTime -ge $StartedAt.AddMinutes(-1) |
+function Get-LatestWerReport([datetime]$StartedAt) {
+    $werRoots = @('ReportArchive', 'ReportQueue') | ForEach-Object {
+        Join-Path $env:ProgramData "Microsoft\Windows\WER\$_"
+    } | Where-Object { Test-Path -LiteralPath $_ -PathType Container }
+    if (-not $werRoots) { return $null }
+    return Get-ChildItem -LiteralPath $werRoots -Directory -Filter 'AppCrash_wmn6r.exe*' -ErrorAction SilentlyContinue |
+        Where-Object LastWriteTime -ge $StartedAt |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
+}
+
+function Save-LatestWerReport([datetime]$StartedAt) {
+    $latest = Get-LatestWerReport $StartedAt
     if (-not $latest) { return }
     $destination = Join-Path $logRoot ("WER-{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Path $destination -Force | Out-Null
@@ -322,6 +371,10 @@ try {
     if (-not $game) { throw 'TeknoParrot did not start the configured wmn6r.exe within two minutes.' }
 
     Write-LaunchLog "wmn6r.exe started as PID $($game.Id)."
+    # Retain the process handle so ExitCode remains readable after Esc closes it.
+    $null = $game.Handle
+    $gameStartedAt = $game.StartTime
+    [WmmtExitMonitor]::Start($game.Id)
     if ($Borderless) {
         $borderlessState = Start-BorderlessSession $game
         Write-LaunchLog "Borderless mode active at $($borderlessState.Width)x$($borderlessState.Height), aspect $($borderlessState.Aspect); unused monitor area is black."
@@ -339,10 +392,15 @@ try {
         $game.Refresh()
     }
     try { $exitCode = $game.ExitCode } catch { $exitCode = -1 }
+    if ($null -eq $exitCode) { $exitCode = -1 }
     $runtime = [Math]::Round(((Get-Date) - $launchStarted).TotalSeconds, 1)
     Write-LaunchLog "wmn6r.exe exited after $runtime seconds with code $exitCode."
-    if ($exitCode -ne 0 -or $runtime -lt 30) {
-        Save-LatestWerReport $launchStarted
+    $outcome = Get-WmmtExitOutcome $exitCode ([WmmtExitMonitor]::EscapeRequested) ([bool](Get-LatestWerReport $gameStartedAt))
+    if ($outcome -in 'UserExit', 'NormalExit') {
+        Write-LaunchLog "Game closed normally ($outcome)."
+        $exitCode = 0
+    } else {
+        Save-LatestWerReport $gameStartedAt
         throw "WMMT6 terminated unexpectedly (exit code $exitCode, runtime ${runtime}s). See $logPath"
     }
 }
@@ -352,6 +410,7 @@ catch {
     $exitCode = 1
 }
 finally {
+    [WmmtExitMonitor]::Stop()
     Stop-BorderlessSession $borderlessState
     if ($startedAuth -and -not $startedAuth.HasExited) {
         Write-LaunchLog "Stopping launcher-owned AMAuth process $($startedAuth.Id)."

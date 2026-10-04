@@ -12,6 +12,7 @@ if (-not $mutex.WaitOne(0)) { exit 0 }
 function Write-RelayLog([string]$Message) {
     Add-Content -LiteralPath $logPath -Value ("{0:u} {1}" -f (Get-Date), $Message) -Encoding UTF8
 }
+
 $udp = $null
 try {
     if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) { throw 'Server terminal is not configured.' }

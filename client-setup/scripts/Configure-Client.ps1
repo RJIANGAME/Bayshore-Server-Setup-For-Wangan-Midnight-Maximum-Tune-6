@@ -153,6 +153,9 @@ $gameRoot = Split-Path $gameExe -Parent
 $tpRoot = Split-Path $tpExe -Parent
 $amcus = Join-Path $gameRoot 'AMCUS'
 $launcherSourceRoot = Join-Path $clientRoot 'launcher'
+if (Get-Process -Name 'wmn6r', 'TeknoParrotUi' -ErrorAction SilentlyContinue) {
+    throw 'Close WMMT6 and TeknoParrot before setup, so they cannot overwrite the new cabinet settings. No client files were changed.'
+}
 
 foreach ($required in $gameExe, $tpExe, (Join-Path $amcus 'AMAuthd.exe'), (Join-Path $amcus 'AMConfig.ini'), (Join-Path $amcus 'iauthdll.dll'), (Join-Path $amcus 'MuchaBin\muchacd.exe')) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Required client file is missing: $required" }
@@ -184,7 +187,7 @@ $embeddedAuthSerials = @([regex]::Matches($openParrotAscii, '2808119900\d{2}') |
 if ($embeddedAuthSerials.Count -ne 1) {
     throw "Could not identify exactly one WMMT6 AMAuth serial in OpenParrot64.dll. Found: $($embeddedAuthSerials -join ', '). Restore or rebuild a compatible Project Asakura OpenParrot DLL."
 }
-foreach ($required in 'WMMT6-Launch.bat', 'WMMT6-Launch.ps1') {
+foreach ($required in 'WMMT6-Launch.bat', 'WMMT6-Launch.ps1', 'WMMT6-Client.Common.ps1') {
     $requiredPath = Join-Path $launcherSourceRoot $required
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "Required safe launcher file is missing: $requiredPath" }
 }
@@ -317,6 +320,10 @@ if (-not ($msvcr100Candidates | Where-Object { Test-Path -LiteralPath $_ -PathTy
 if (-not (Get-NetIPAddress -AddressFamily IPv4 -IPAddress $config.AdapterIp -ErrorAction SilentlyContinue | Select-Object -First 1)) {
     throw "The selected client IPv4 address is not assigned to this computer: $($config.AdapterIp). No client files were changed."
 }
+. (Join-Path $launcherSourceRoot 'WMMT6-Client.Common.ps1')
+$gameSettingsPath = Join-Path $gameRoot 'TP\setting.lua.gz'
+$gameSettingsSource = if (Test-Path -LiteralPath $gameSettingsPath -PathType Leaf) { $gameSettingsPath } else { [string]$resolvedClientAssets['setting.lua.gz'] }
+$configuredGameSettings = Set-WmmtCabinetSettings ([IO.File]::ReadAllBytes($gameSettingsSource)) $cabinetId
 Write-Host 'Complete client preflight passed. Applying configuration...' -ForegroundColor Green
 
 $backupRoot = Join-Path $clientRoot ("backups\{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -359,7 +366,10 @@ function Install-VerifiedAsset([string]$Name, [string]$Destination, [string]$Exp
 }
 
 Install-VerifiedAsset 'bngrw.dll' (Join-Path $gameRoot 'bngrw.dll') '1B4222AA81F55E020CEDFF1A254A32F5F6F7B0CE5D67D88E71134C52F3941E74'
-Install-VerifiedAsset 'setting.lua.gz' (Join-Path $gameRoot 'TP\setting.lua.gz') '298852A70485DBBAA889739A8A360923DFE7262231AE15CCE758F56ABF8093DD'
+Backup-File $gameSettingsPath
+New-Item -ItemType Directory -Force -Path (Split-Path $gameSettingsPath -Parent) | Out-Null
+[IO.File]::WriteAllBytes($gameSettingsPath, $configuredGameSettings)
+Write-Host "Game Service cabinet number: $cabinetId (mPcbId=$($cabinetId - 1)); existing calibration and service settings preserved."
 
 foreach ($target in @(
     (Join-Path $gameRoot 'data_jp\network\certs\terminal-cert_v388.pem'),
@@ -546,15 +556,18 @@ $identity.ProfileFile = $baseProfile.Name
 $safeLauncherBat = Join-Path $tpRoot 'WMMT6-Launch.bat'
 $safeLauncherScript = Join-Path $tpRoot 'WMMT6-Launch.ps1'
 $safeLauncherConfig = Join-Path $tpRoot 'WMMT6-Launch.json'
-foreach ($target in $safeLauncherBat, $safeLauncherScript, $safeLauncherConfig) { Backup-File $target }
+$safeLauncherCommon = Join-Path $tpRoot 'WMMT6-Client.Common.ps1'
+foreach ($target in $safeLauncherBat, $safeLauncherScript, $safeLauncherConfig, $safeLauncherCommon) { Backup-File $target }
 Copy-Item -LiteralPath (Join-Path $launcherSourceRoot 'WMMT6-Launch.bat') -Destination $safeLauncherBat -Force
 Copy-Item -LiteralPath (Join-Path $launcherSourceRoot 'WMMT6-Launch.ps1') -Destination $safeLauncherScript -Force
+Copy-Item -LiteralPath (Join-Path $launcherSourceRoot 'WMMT6-Client.Common.ps1') -Destination $safeLauncherCommon -Force
 $safeLauncherSettings = [ordered]@{
     GameExecutable = $gameExe
     AuthExecutable = (Join-Path $amcus 'AMAuthd.exe')
     MuchaExecutable = (Join-Path $amcus 'MuchaBin\muchacd.exe')
     ProfileFile = $baseProfile.Name
     AdapterIp = $config.AdapterIp
+    CabinetId = $cabinetId
     ServerUri = "https://$($config.ServerIp):9002"
     OpenParrotPath = $installedOpenParrotPath
     OpenParrotSha256 = $installedOpenParrotHash
@@ -629,9 +642,9 @@ if (-not $route) { throw 'The 225.0.0.1/32 multicast route was not present after
 $firewallEntries = @(@{ Name = 'WMMT6 Cabinet'; Program = $gameExe })
 if ($maxiExe) { $firewallEntries += @{ Name = 'WMMT6 MaxiTerminal'; Program = $maxiExe } }
 foreach ($entry in $firewallEntries) {
-    if (-not (Get-NetFirewallRule -DisplayName $entry.Name -ErrorAction SilentlyContinue)) {
-        New-NetFirewallRule -DisplayName $entry.Name -Direction Inbound -Action Allow -Program $entry.Program | Out-Null
-    }
+    # Refresh our own rule when a user selects a different game installation.
+    Get-NetFirewallRule -DisplayName $entry.Name -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    New-NetFirewallRule -DisplayName $entry.Name -Direction Inbound -Action Allow -Program $entry.Program -RemoteAddress LocalSubnet -Profile Any | Out-Null
 }
 
 $regsvr32 = Join-Path $env:WINDIR 'System32\regsvr32.exe'
@@ -665,6 +678,6 @@ Write-Host "Aspect-preserving borderless launcher: $safeLauncherBat"
 Write-Host 'White Screen Fix: enabled; Windowed mode: disabled'
 Write-Host 'Borderless mode: centered 16:9 with black bars; display resolution is unchanged'
 Write-Host "Client identity: $identityPath"
-Write-Host "Cabinet number (AMAuth netID): $cabinetId"
+Write-Host "Cabinet number: $cabinetId (game mPcbId=$($cabinetId - 1), AMAuth netID=$cabinetId)"
 Write-Host "Matched AMAuth serial: $driveSerial"
 if (-not $maxiExe) { Write-Host 'MaxiTerminal: server-side venue service; nothing is installed on this client' }

@@ -3,7 +3,8 @@ param(
     [string]$BayshoreRoot,
     [string]$MaxiTerminalPath,
     [string[]]$TerminalRelayClientIp,
-    [switch]$SkipFirewall
+    [switch]$SkipFirewall,
+    [switch]$NonInteractive
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,7 +37,13 @@ function Select-MaxiTerminal {
     finally { $picker.Dispose() }
 }
 
-if (-not $BayshoreRoot) { $BayshoreRoot = Select-Folder 'Select the Bayshore server root folder' }
+if (-not $BayshoreRoot) {
+    $adjacentRoot = Split-Path $setupRoot -Parent
+    if (Test-Path -LiteralPath (Join-Path $adjacentRoot 'config.json') -PathType Leaf) {
+        $BayshoreRoot = $adjacentRoot
+        Write-Host "Using the adjacent configured Bayshore server: $BayshoreRoot"
+    } else { $BayshoreRoot = Select-Folder 'Select the Bayshore server root folder' }
+}
 $BayshoreRoot = [IO.Path]::GetFullPath($BayshoreRoot)
 
 $applicationRoot = $null
@@ -74,6 +81,26 @@ if (Test-Path -LiteralPath $envPath -PathType Leaf) {
     if ($portMatch.Success) { $servicePort = [int]$portMatch.Groups[1].Value }
 }
 
+$installedConfigPath = Join-Path $setupRoot 'server-terminal.json'
+$existingInstalledConfig = if (Test-Path -LiteralPath $installedConfigPath -PathType Leaf) {
+    Get-Content -LiteralPath $installedConfigPath -Raw | ConvertFrom-Json
+} else { $null }
+if (-not $PSBoundParameters.ContainsKey('TerminalRelayClientIp')) {
+    $previousIps = if ($existingInstalledConfig) { @($existingInstalledConfig.TerminalRelayClientIps) } else { @() }
+    Write-Host 'Optional Wi-Fi terminal relay: enter stable cabinet IPv4 addresses separated by commas.'
+    Write-Host 'This helps terminal discovery. Versus still requires a reliable connection between the PCs.'
+    $relayInput = if ($NonInteractive) { '' } else { (Read-Host "Cabinet IPs [Enter keeps: $($previousIps -join ', '); NONE disables]").Trim() }
+    $TerminalRelayClientIp = if ($relayInput -ieq 'NONE') { @() } elseif ($relayInput) { $relayInput -split '[,;\s]+' } else { $previousIps }
+}
+$relayClientIps = @(@($TerminalRelayClientIp) | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ } | Sort-Object -Unique)
+foreach ($clientIp in $relayClientIps) {
+    $parsedClientIp = $null
+    if (-not [Net.IPAddress]::TryParse($clientIp, [ref]$parsedClientIp) -or
+        $parsedClientIp.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $clientIp -eq $serverIp) {
+        throw "Invalid terminal relay client IPv4 address: $clientIp. No terminal files were changed."
+    }
+}
+
 $terminalRoot = Join-Path $applicationRoot 'bin\MaxiTerminal'
 $terminalExe = Join-Path $terminalRoot 'MaxiTerminal.exe'
 New-Item -ItemType Directory -Force -Path $terminalRoot | Out-Null
@@ -105,25 +132,13 @@ $terminalConfig = [ordered]@{
     continue_cost = 1
     fullcourse_cost = 4
 }
-[IO.File]::WriteAllText((Join-Path $terminalRoot 'config.json'), ($terminalConfig | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
-
-$existingInstalledConfig = $null
-$installedConfigPath = Join-Path $setupRoot 'server-terminal.json'
-if (Test-Path -LiteralPath $installedConfigPath -PathType Leaf) {
-    $existingInstalledConfig = Get-Content -LiteralPath $installedConfigPath -Raw | ConvertFrom-Json
-}
-if (-not $TerminalRelayClientIp -and $existingInstalledConfig -and
-    $existingInstalledConfig.PSObject.Properties.Name -contains 'TerminalRelayClientIps') {
-    $TerminalRelayClientIp = @($existingInstalledConfig.TerminalRelayClientIps)
-}
-$relayClientIps = @($TerminalRelayClientIp) | ForEach-Object { [string]$_ } | Where-Object { $_ } | Sort-Object -Unique
-foreach ($clientIp in $relayClientIps) {
-    $parsedClientIp = $null
-    if (-not [Net.IPAddress]::TryParse($clientIp, [ref]$parsedClientIp) -or
-        $parsedClientIp.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $clientIp -eq $serverIp) {
-        throw "Invalid terminal relay client IPv4 address: $clientIp"
+$terminalConfigPath = Join-Path $terminalRoot 'config.json'
+foreach ($existingPath in $terminalConfigPath, $installedConfigPath) {
+    if (Test-Path -LiteralPath $existingPath -PathType Leaf) {
+        Copy-Item -LiteralPath $existingPath -Destination "$existingPath.$(Get-Date -Format 'yyyyMMdd-HHmmss-fff').bak"
     }
 }
+[IO.File]::WriteAllText($terminalConfigPath, ($terminalConfig | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
 
 $installedConfig = [ordered]@{
     BayshoreRoot = $BayshoreRoot
@@ -144,7 +159,14 @@ $installedConfig = [ordered]@{
 if (-not $SkipFirewall) {
     $ruleName = 'Bayshore WMMT6 MaxiTerminal UDP 50765'
     Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-    New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow -Protocol UDP -LocalPort 50765 -Program $terminalExe | Out-Null
+    New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow -Protocol UDP -LocalPort 50765 -Program $terminalExe -RemoteAddress LocalSubnet -Profile Any | Out-Null
+    # The PowerShell relay shares UDP 50765 but has a different process path.
+    $relayRuleName = 'Bayshore WMMT6 Terminal Relay UDP 50765'
+    Get-NetFirewallRule -DisplayName $relayRuleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    if ($relayClientIps.Count -gt 0) {
+        New-NetFirewallRule -DisplayName $relayRuleName -Direction Inbound -Action Allow -Protocol UDP -LocalPort 50765 `
+            -Program (Join-Path $PSHOME 'powershell.exe') -RemoteAddress LocalSubnet -Profile Any | Out-Null
+    }
 }
 
 Write-Host 'Verified and installed the user-supplied MaxiTerminal.' -ForegroundColor Green

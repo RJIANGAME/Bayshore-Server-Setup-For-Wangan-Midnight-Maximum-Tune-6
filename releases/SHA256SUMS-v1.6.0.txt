@@ -1,0 +1,2 @@
+6b86f2feb5a062aaf857e8ca8b404db12394752c2a6b0126c6458ab0f4b796c2  Bayshore-WMMT6-Client-Setup-v1.6.0.zip
+c51780baba721adadd79ad90100b8e441cacfb3bf11a90d112c1d01be207156d  Bayshore-WMMT6-Server-Setup-v1.6.0.zip

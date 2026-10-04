@@ -18,6 +18,19 @@
 > [!CAUTION]
 > Use only a clean Japanese WMMT6 game dump that you are legally entitled to possess. This guide does not provide or authorize distribution of copyrighted game data.
 
+## Start here - v1.6.0 (2026-10-04)
+
+Read the [quick start](QUICK-START.md) for the server and each player PC.
+
+- [Download Client Setup v1.6.0](releases/Bayshore-WMMT6-Client-Setup-v1.6.0.zip?raw=true): verified assets included; choose cabinet 1-4 and launch through TeknoParrot.
+- [Download Server Setup v1.6.0](releases/Bayshore-WMMT6-Server-Setup-v1.6.0.zip?raw=true): Bayshore source and Windows setup tools included; run `Configure-Server.bat` after installing Node.js LTS.
+- Cabinet selection now changes the game's zero-based `mPcbId` as well as AMAuth `netID`. Existing calibration and other Service settings are preserved.
+- Esc exits normally. Actual native crashes and failed startup still produce diagnostics.
+- Server setup asks for Wi-Fi terminal relay IPs, backs up existing configuration, and configures the terminal and relay firewall rules.
+- `Check-Multiplayer-Network.bat` checks loss and latency. The terminal relay carries heartbeats only; versus requires a reliable player-to-player LAN connection.
+
+Existing users must rerun the new client setup on each PC. For server upgrades, keep the existing player database, `.env`, and `server-terminal.json`; follow the upgrade instructions in the quick start.
+
 ## Universal Client Configurator
 
 The repository now includes a [client-only configurator](client-setup) for a new cabinet that already has TeknoParrot and a legally obtained Japanese WMMT6 1.03.04 installation. The client does not need the full Bayshore source tree, Node.js, or PostgreSQL.

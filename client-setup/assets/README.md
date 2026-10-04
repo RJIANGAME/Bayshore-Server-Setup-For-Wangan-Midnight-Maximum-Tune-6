@@ -1,6 +1,6 @@
 # Required client assets
 
-The v1.5.1 release ZIP includes the four verified Bayshore-specific files below. `OpenParrot64.dll` is intentionally not included or replaced; use the version supplied by the installed TeknoParrot release.
+The v1.6.0 release ZIP includes the four verified Bayshore-specific files below. `OpenParrot64.dll` is intentionally not included or replaced; use the version supplied by the installed TeknoParrot release.
 
 | File | Required SHA-256 |
 |---|---|
@@ -13,6 +13,11 @@ The configurator verifies all four packaged files, the selected WMMT6/AMCUS
 installation, the TeknoParrot profile, client identity, and network adapter
 before modifying anything. If a packaged file is removed, setup can still use
 a hash-matching copy or ask the user to select one.
+
+The listed `setting.lua.gz` hash identifies the packaged template. Setup changes
+its `mPcbId` for the selected cabinet, so the installed file has a different
+hash. If a valid settings file already exists, setup preserves its other Service
+settings and calibration, backs it up, and changes only `mPcbId`.
 
 Setup preserves the installed TeknoParrot `OpenParrotx64\OpenParrot64.dll`.
 It rejects the two custom DLL hashes shipped by client setup v1.1.7-v1.2.0

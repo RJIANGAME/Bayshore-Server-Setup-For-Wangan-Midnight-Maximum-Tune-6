@@ -2,6 +2,10 @@
 
 This folder configures a legally obtained Japanese WMMT6 1.03.04 client to use a separate Project Asakura Bayshore server. The client computer does not need Node.js, PostgreSQL, or a full Bayshore server checkout.
 
+Use the **v1.6.0 client setup ZIP** from the repository's `releases` folder. Extract it separately on each PC, close the game, and run `Configure-Client.bat` as administrator. Choose different cabinet numbers (1, 2, 3, or 4), then launch with `WMMT6-Launch.bat` beside TeknoParrot. Upgrading users must rerun setup on each PC to install the fixes.
+
+v1.6.0 fixes the cabinet selector: selection 1 writes game `mPcbId=0`, selection 2 writes `mPcbId=1`, and so on. Previous packages only changed AMAuth `netID`, leaving every game at cabinet 2. Setup now changes both and preserves existing calibration, credits, audio, and other Service settings. Esc closes the game normally without the CMD launch-failed message; native crashes remain failures with diagnostics.
+
 ## What setup asks for
 
 1. The Bayshore server IPv4 address, such as `192.168.0.25`.
@@ -39,6 +43,7 @@ The x64 Microsoft Visual C++ 2010 SP1 runtime (`MSVCR100.dll`) is also required 
 - `WritableConfig.ini` with a unique drive serial;
 - automatic matching of AMAuth `serialID` to the `280811...` auth identity embedded in OpenParrot;
 - `WritableConfig.ini` with a unique cabinet `netID` from 1 through 4;
+- the matching game Service cabinet number in `TP\setting.lua.gz` (`mPcbId` 0 through 3);
 - a persistent, unique client/card identity;
 - the existing WMMT6 user profile, automatically corrected with the selected game path, single-executable launching, terminal emulation, card access, the active client adapter, the real router, `WhiteScreenFix=1`, and `Windowed=0`;
 - removal of obsolete `WMMT6-Bayshore.xml` copies that appeared as a second `Metadata Missing` game;
@@ -54,7 +59,9 @@ Setup backs up and removes the obsolete independent `WMMT6-Borderless.*` helper 
 
 Existing files are backed up under `client-setup\backups` before replacement. Do not copy `generated-client-identity.json` or `card.ini` between active cabinets.
 
-For simultaneous play, every computer must use a different cabinet number: cabinet 1 uses `netID=1`, cabinet 2 uses `netID=2`, and so on. A different card ID or drive serial does not replace this requirement. If two clients were configured with an older package, update the package and rerun `Configure-Client.bat` on each computer, selecting a different cabinet number. Only one MaxiTerminal instance should run for the venue.
+For simultaneous play, every computer must use a different cabinet number: cabinet 1 uses `netID=1` and `mPcbId=0`, cabinet 2 uses `netID=2` and `mPcbId=1`, and so on. Check the game Service menu shows the number selected in setup. A different card ID or drive serial does not replace this requirement. If two clients were configured with an older package, update the package and rerun `Configure-Client.bat` on each computer, selecting a different cabinet number. Only one MaxiTerminal instance should run for the venue.
+
+If versus starts but returns to Story Mode selection, check duplicate cabinet numbers and the connection between the player PCs. Use the same LAN and Ethernet for the most reliable test. Wi-Fi multicast loss, latency spikes, guest networks, and client isolation can interrupt versus even while Bayshore and MaxiTerminal remain healthy. The server terminal relay carries terminal heartbeats only; it cannot repair a dropped race connection. Run the server package's `Check-Multiplayer-Network.bat` on each PC against the other PC to inspect packet loss and latency. ICMP replies alone do not prove game UDP traffic works.
 
 The supported OpenParrot source contains an AMAuth/terminal identity of `280811990002` and a separate drive-dongle identity beginning with `280813`. `AMCUS\WritableConfig.ini` requires the `280811...` identity. Setup detects that embedded value and writes it automatically. Using `280813...` causes startup error E0517 after ALL.Net and before MUCHA. Leave `DriveSerial` as `AUTO` unless diagnosing a custom build; an explicit value is rejected when it differs from the DLL.
 
